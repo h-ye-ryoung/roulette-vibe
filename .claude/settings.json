@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "frontend-design-pro@frontend-design-pro": true,
+    "ccpp@my-claude-code-asset": true
+  }
+}
