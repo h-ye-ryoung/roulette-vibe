@@ -91,9 +91,16 @@
 
 ## 6. 기술 스택
 
-### Backend
-- Spring Boot 3.x / Kotlin / JPA(Hibernate) / Swagger(OpenAPI 3)
-- DB: PostgreSQL(개발: Docker, 배포: Neon)
+### Backend (확정)
+- **Spring Boot 3.4.2** / **Kotlin 2.0.x** / **Java 21 LTS**
+- Build: **Gradle 8.x (Kotlin DSL)** — Wrapper로 관리
+- ORM: **Spring Data JPA** (Hibernate)
+- Auth: **Spring Security** (HTTP 세션 기반, 닉네임 mocking 로그인)
+- API 문서: **springdoc-openapi-starter-webmvc-ui** (Swagger UI)
+- 검증: **spring-boot-starter-validation** (Jakarta Validation)
+- 직렬화: **jackson-module-kotlin** + **kotlin-reflect**
+- DB: **PostgreSQL 16** (로컬: Docker Compose / 배포: Neon)
+- 테스트: **JUnit 5** + **MockK**
 
 ### Frontend / Admin
 - React 18+ / TypeScript / Vite / TanStack Query / Tailwind
@@ -144,28 +151,7 @@
 
 ---
 
-## 9. 실행 커맨드 (프로젝트에 맞게 유지/업데이트)
-
-> 아래 커맨드는 실제 repo에 맞게 반드시 최신 상태로 유지한다.
-
-### Backend (예시)
-- Run: `./gradlew bootRun`
-- Test: `./gradlew test`
-- Build: `./gradlew clean build`
-
-### Frontend/Admin (예시)
-- Install: `npm i`
-- Dev: `npm run dev`
-- Build: `npm run build`
-- Lint(선택): `npm run lint`
-
-### Mobile (예시)
-- Run: `flutter run`
-- Build APK: `flutter build apk`
-
----
-
-## 10. 코딩 컨벤션
+## 9. 코딩 컨벤션
 
 ### Backend (Kotlin)
 - Controller: 요청/응답 매핑 + Service 호출만 (비즈니스 로직 금지)
@@ -180,7 +166,7 @@
 
 ---
 
-## 11. 테스트 정책
+## 10. 테스트 정책
 
 - 핵심 로직은 단위 테스트 우선. 특히:
   - 룰렛 참여(중복/예산)
@@ -206,7 +192,7 @@
 
 ---
 
-## 12. 환경 변수 / 시크릿 정책 (중요)
+## 11. 환경 변수 / 시크릿 정책 (중요)
 
 - 모든 민감 정보(DB URL, API 키 등)는 코드에 하드코딩하지 않는다.
 - 로컬 환경:
@@ -219,16 +205,24 @@
 
 ### 필수 환경변수 목록
 
-| 변수 | 용도 |
-|---|---|
-| `DATABASE_URL` | PostgreSQL 접속 URL |
-| `ADMIN_NICKNAMES` | 어드민 닉네임 목록 (콤마 구분) |
-| `JWT_SECRET` | 토큰 서명 키 |
-| `DAILY_BUDGET_DEFAULT` | 기본 일일 예산 (선택, 기본값 100000) |
+| 변수 | 용도 | 로컬 기본값 |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL 접속 URL | `jdbc:postgresql://localhost:5432/roulette` |
+| `DATABASE_USERNAME` | DB 유저 | `postgres` |
+| `DATABASE_PASSWORD` | DB 비밀번호 | `postgres` |
+| `ADMIN_NICKNAMES` | 어드민 닉네임 목록 (콤마 구분) | `admin` |
+| `DAILY_BUDGET_DEFAULT` | 기본 일일 예산 (선택, 기본값 100000) | `100000` |
+
+### 프로파일 전략
+
+| 프로파일 | DB | 용도 |
+|---|---|---|
+| `local` (기본) | Docker PostgreSQL 16 | 로컬 개발 |
+| `prod` | Neon PostgreSQL | 배포 |
 
 ---
 
-## 13. 문서 / 로그 규칙 (핵심)
+## 12. 문서 / 로그 규칙 (핵심)
 
 ### PROMPT.md (원문 로그, 가공 금지)
 - AI와 주고받은 프롬프트/응답을 **가공 없이 원문 그대로** 기록한다.
@@ -275,7 +269,7 @@ PROMPT.md 하단에는 마지막 기록 시점을 나타내는 커서를 둔다.
 
 ---
 
-## 14. 기본 작업 순서 원칙
+## 13. 기본 작업 순서 원칙
 
 1. ~~clarify 실행~~ (완료)
 2. ~~사용자 답변 확정~~ (완료)
@@ -286,6 +280,19 @@ PROMPT.md 하단에는 마지막 기록 시점을 나타내는 커서를 둔다.
 7. 프론트엔드 배포
 8. 모바일(Flutter) 구현
 9. 모바일 배포
+
+> **작업 실행 규칙**: 태스크는 기능 단위로 잘게 쪼개어 진행한다. 한 번에 여러 기능을 동시에 구현하지 않고, 기능 하나를 완료한 뒤 다음으로 넘어간다.
+
+---
+
+## 14. SSOT(Single Source of Truth) 원칙
+
+1. **명세 참조 필수**: 구현 시 반드시 `docs/SPEC.md`를 참조한다. SPEC.md에 정의되지 않은 사항을 임의로 구체화하거나 추가하지 않는다.
+2. **문서 역할 분리**:
+   - `CLAUDE.md` — 설계 원칙, 정책, 규칙 (What & Why)
+   - `docs/SPEC.md` — 구현 명세 (How: 엔티티, API, 화면, 테스트 상세)
+   - 동일 정보를 두 문서에 중복 기술하지 않는다. CLAUDE.md는 정책 수준만 기술하고, 구체적 구현 명세는 SPEC.md에 위임한다.
+3. **충돌 시 우선순위**: CLAUDE.md(정책) > SPEC.md(명세). 정책이 명세보다 우선한다.
 
 ---
 
