@@ -111,7 +111,67 @@
 ### Infra
 - GitHub Actions(backend CI/CD 필수)
 - Vercel(frontend/admin 배포)
-- Render/Railway(backend 배포), Neon(DB)
+- Render(backend 배포), Neon(DB)
+
+### 배포 아키텍처 (Production)
+
+#### GitHub Actions CI/CD
+- **워크플로우 파일**: `.github/workflows/backend-deploy.yml`
+- **트리거**: `main` 브랜치 push (backend 폴더 변경 시)
+- **빌드 환경**: Ubuntu Latest + JDK 21 (Temurin)
+- **빌드 도구**: Gradle 8.x (Kotlin DSL)
+- **파이프라인**:
+  1. **Build & Test**: `./gradlew build` + `./gradlew test`
+  2. **Artifact Upload**: JAR 파일 (1일 보관)
+  3. **Deploy**: Render Deploy Hook 호출
+
+#### Render (Backend Hosting)
+- **플랜**: Free Tier
+- **리전**: Oregon (US West)
+- **런타임**: Java 21
+- **빌드 명령**: `cd backend && ./gradlew build -x test`
+- **시작 명령**: `cd backend && java -jar build/libs/*.jar`
+- **Health Check**: `/actuator/health`
+- **환경변수** (GitHub Secrets 관리):
+  - `SPRING_PROFILES_ACTIVE=prod`
+  - `DATABASE_URL` (Neon 연결 문자열)
+  - `DATABASE_USERNAME` (수동 설정)
+  - `DATABASE_PASSWORD` (수동 설정)
+  - `ADMIN_NICKNAMES` (수동 설정)
+  - `DAILY_BUDGET_DEFAULT=100000`
+  - `SERVER_PORT=8080`
+- **HTTPS**: 자동 제공 (Render 기본 지원)
+- **도메인**: `*.onrender.com` (무료 서브도메인)
+
+#### Neon PostgreSQL (Database)
+- **플랜**: Free Tier
+- **리전**: Oregon (US West)
+- **버전**: PostgreSQL 16
+- **데이터베이스명**: `roulette`
+- **유저명**: `roulette_user`
+- **연결 방식**: Render 환경변수로 자동 연결
+
+#### 배포 워크플로우
+```
+1. 코드 push to main
+   ↓
+2. GitHub Actions 트리거
+   ↓
+3. 빌드 & 테스트 (JUnit 5)
+   ↓
+4. JAR 빌드 성공
+   ↓
+5. Render Deploy Hook 호출
+   ↓
+6. Render: JAR 다운로드 & 실행
+   ↓
+7. Health Check 통과
+   ↓
+8. 배포 완료 (HTTPS 자동 활성화)
+```
+
+#### 필수 GitHub Secrets
+- `RENDER_DEPLOY_HOOK`: Render 배포 웹훅 URL (수동 설정 필요)
 
 ---
 

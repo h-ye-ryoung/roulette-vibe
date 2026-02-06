@@ -1,6 +1,6 @@
 # HANDOFF.md — 세션 인계 문서
 
-> **최종 갱신**: 2026-02-06T16:10:00+09:00
+> **최종 갱신**: 2026-02-06T21:00:00+09:00
 
 ---
 
@@ -9,7 +9,7 @@
 | # | 작업 | 상태 | 산출물 |
 |---|---|---|---|
 | 1 | 요구사항 분석 및 PDP 1~8 확정 | 완료 | `CLAUDE.md` §3 |
-| 2 | API 명세 수정 (주문 취소 권한, 상품 DELETE, 룰렛 취소 정책) | 완료 | `SPEC.md` v1.1 (19개 API), `CLAUDE.md` 업데이트 |
+| 2 | API 명세 확정 | 완료 | `SPEC.md` v1.1 (22개 API) |
 | 3 | Gradle 프로젝트 초기화 | 완료 | `backend/build.gradle.kts`, Gradle Wrapper 8.12 |
 | 4 | Docker Compose 작성 | 완료 | `compose.yml` — PostgreSQL 16 컨테이너 |
 | 5 | 설정 파일 작성 | 완료 | `application.yml`, `application-local.yml`, `application-prod.yml` |
@@ -17,39 +17,178 @@
 | 7 | 메인 애플리케이션 작성 | 완료 | `RouletteApplication.kt` |
 | 8 | Entity + JPA 매핑 (7개) | 완료 | User, DailyBudget, RouletteHistory, PointLedger, Product, Order, OrderPointUsage |
 | 9 | Repository 인터페이스 + 동시성 쿼리 | 완료 | `decrementRemaining`, `decrementStock`, `findAvailableByUserIdForUpdate` |
-| 10 | 세션 기반 Auth 구현 | 완료 | AuthController, AuthService, CustomUserDetailsService, SecurityConfig, SessionAuthenticationFilter |
+| 10 | 세션 기반 Auth 구현 | 완료 | AuthController, AuthService, CustomUserDetailsService, SecurityConfig |
 | 11 | 예외 처리 체계 구축 | 완료 | BusinessException 계층, GlobalExceptionHandler, ApiResponse 래퍼 |
-| 12 | **룰렛 기능 구현 (Step 11)** | ✅ 완료 | RouletteService, RouletteController, DTO, 중복 방지 로직 |
-| 13 | **포인트 기능 구현 (Step 12)** | ✅ 완료 | PointService, PointController, DTO, 잔액/내역 조회, PointLedger에 type/issuedAt 추가 |
-| 14 | **상품 기능 구현 (Step 13)** | ✅ 완료 | ProductService, ProductController, DTO, 재고 필터링 (stock > 0) |
-| 15 | **주문 기능 구현 (Step 14)** | ✅ 완료 | OrderService, OrderController, DTO, FIFO 포인트 차감, 원자적 재고 관리 |
-| 16 | 대화 로그 기록 | 완료 | `docs/PROMPT.md` (커서: `2026-02-06T16:05:00+09:00`) |
+| 12 | **룰렛 기능 (Step 11)** | ✅ 완료 | RouletteService, RouletteController, 중복 방지 로직 |
+| 13 | **포인트 기능 (Step 12)** | ✅ 완료 | PointService, PointController, 잔액/내역 조회, 만료 예정 구분 |
+| 14 | **상품 기능 (Step 13)** | ✅ 완료 | ProductService, ProductController, 재고 필터링 |
+| 15 | **주문 기능 (Step 14)** | ✅ 완료 | OrderService, OrderController, FIFO 포인트 차감 |
+| 16 | **어드민 API (Step 15)** | ✅ 완료 | AdminService, AdminController, 대시보드/예산/상품/주문/룰렛 관리 (12개 API) |
+| 17 | **동시성 테스트 (Step 16)** | ✅ 완료 | ConcurrencyTest.kt (T-1~T-7 모두 통과) |
+| 18 | 대화 로그 기록 | 완료 | `docs/PROMPT.md` (커서: `2026-02-06T20:59:00+09:00`) |
 
 ---
 
 ## 2. 남은 작업 (우선순위순)
 
-### Phase 1: 백엔드 코어 구현 (진행 중)
+### Phase 1: 백엔드 코어 구현 ✅ 완료
 
 | 우선순위 | 작업 | 상태 |
 |---|---|---|
-| ~~P0~~ | ~~Step 11: 룰렛 기능 구현~~ | ✅ 완료 |
-| ~~P0~~ | ~~Step 12: 포인트 기능 구현~~ | ✅ 완료 |
-| ~~P0~~ | ~~Step 13: 상품 기능 구현~~ | ✅ 완료 |
-| ~~P0~~ | ~~Step 14: 주문 기능 구현 (사용자: 생성/조회만, 취소 불가)~~ | ✅ 완료 |
-| **P0** | Step 15: 어드민 API 구현 (대시보드, 예산, 상품CRUD+DELETE, 주문/룰렛 취소) | 대기 중 (다음 작업) |
-| **P0** | Step 16: 동시성 테스트 (T-1~T-7) | 대기 중 |
-| P1 | Phase 2: 백엔드 배포 | Render/Railway + Neon + GitHub Actions CI/CD |
-| P2 | Phase 3: 프론트엔드(사용자) 구현 | React + TypeScript + Vite + TanStack Query + Tailwind |
-| P2 | Phase 4: 어드민 웹 구현 | 사용자 웹과 별도 앱 |
-| P3 | Phase 5: 프론트엔드/어드민 배포 | Vercel |
-| P4 | Phase 6: 모바일(Flutter WebView) 구현 및 배포 | 사용자 웹 래핑 |
+| ~~P0~~ | ~~Step 11~14: 사용자 API~~ | ✅ 완료 |
+| ~~P0~~ | ~~Step 15: 어드민 API~~ | ✅ 완료 |
+| ~~P0~~ | ~~Step 16: 동시성 테스트~~ | ✅ 완료 |
+
+### Phase 2: 백엔드 배포 (다음 작업)
+
+| 우선순위 | 작업 | 상태 |
+|---|---|---|
+| **P1** | GitHub Actions CI/CD 구성 | 대기 중 |
+| **P1** | Neon PostgreSQL 프로비저닝 | 대기 중 |
+| **P1** | Render/Railway 배포 | 대기 중 |
+| **P1** | 환경변수 설정 (배포) | 대기 중 |
+| **P1** | 배포 후 API 테스트 | 대기 중 |
+
+### Phase 3~6: 프론트엔드/모바일
+
+| 우선순위 | 작업 | 상태 |
+|---|---|---|
+| P2 | 프론트엔드(사용자) 구현 | React + TypeScript + Vite + TanStack Query |
+| P2 | 어드민 웹 구현 | 사용자 웹과 별도 앱 |
+| P3 | 프론트엔드/어드민 배포 | Vercel |
+| P4 | 모바일(Flutter WebView) | 사용자 웹 래핑 |
 
 ---
 
-## 3. 확정된 설계 결정 요약
+## 3. 백엔드 API 완성 현황
 
-### 기술 스택 (SSOT)
+**✅ 전체 API: 22/22 완료 (100%)**
+
+### 인증 API (1개)
+- ✅ POST /api/auth/login
+
+### 사용자 API (9개)
+- ✅ POST /api/user/roulette/spin
+- ✅ GET /api/user/roulette/status
+- ✅ GET /api/user/points (포인트 목록 - expired/expiringSoon 구분)
+- ✅ GET /api/user/points/balance
+- ✅ GET /api/user/points/expiring
+- ✅ GET /api/user/points/history (별칭)
+- ✅ GET /api/user/products
+- ✅ POST /api/user/orders
+- ✅ GET /api/user/orders
+
+### 어드민 API (12개)
+- ✅ GET /api/admin/dashboard
+- ✅ GET /api/admin/budget
+- ✅ PUT /api/admin/budget
+- ✅ GET /api/admin/products (모든 상품 - ACTIVE/INACTIVE 포함)
+- ✅ POST /api/admin/products
+- ✅ PUT /api/admin/products/{id}
+- ✅ DELETE /api/admin/products/{id}
+- ✅ GET /api/admin/orders
+- ✅ POST /api/admin/orders/{id}/cancel
+- ✅ GET /api/admin/roulette/history
+- ✅ POST /api/admin/roulette/{id}/cancel
+
+---
+
+## 4. 동시성 테스트 결과
+
+**전체 7개 테스트 모두 통과 ✅**
+
+| 테스트 | 시나리오 | 결과 |
+|---|---|---|
+| T-1 | 동일 유저 10개 스레드 동시 참여 | 1건만 성공, 9건 실패 ✓ |
+| T-2 | 100명 동시 참여 (예산 100,000p) | 총 지급액 ≤ 100,000p ✓ |
+| T-3 | 예산 500p 남은 상태 10명 동시 참여 | 최대 5명만 성공 ✓ |
+| T-4 | 재고 1개 상품 3명 동시 주문 | 1건만 성공 ✓ |
+| T-5 | 만료 포인트로 주문 시도 | INSUFFICIENT_POINTS 예외 ✓ |
+| T-6 | 주문 취소 시 포인트 복원 | balance 정확히 복원 ✓ |
+| T-7 | 룰렛 취소 시 부분 회수 | 남은 포인트만 회수 ✓ |
+
+**테스트 파일:**
+- `backend/src/test/kotlin/com/roulette/ConcurrencyTest.kt`
+- `backend/src/test/resources/application-test.yml` (H2 인메모리 DB)
+
+---
+
+## 5. 핵심 정책 (PDP) 구현 상태
+
+| # | 정책 | 구현 | 검증 |
+|---|---|---|---|
+| PDP-1 | Lazy 예산 리셋 | ✅ | getOrCreateTodayBudget() |
+| PDP-2 | 동적 만료 필터 | ✅ | expires_at > NOW() 쿼리 |
+| PDP-3 | FIFO 포인트 차감 | ✅ | ORDER BY expires_at ASC + SELECT FOR UPDATE |
+| PDP-4 | 원래 포인트 복원 | ✅ | OrderPointUsage 기반 balance 복원 |
+| PDP-5 | 당일만 예산 복구 | ✅ | KST 날짜 비교 후 조건부 복구 |
+| PDP-6 | 예산 조건부 차감 | ✅ | WHERE remaining >= :amount |
+| PDP-7 | 닉네임 = 유저 ID | ✅ | 자동 생성/로그인 |
+| PDP-8 | 역할 완전 분리 | ✅ | SecurityConfig 필터 체인 |
+
+---
+
+## 6. 동시성 메커니즘 구현
+
+### 데이터베이스 레벨
+- **UNIQUE 제약**: `(user_id, spin_date)` 중복 방지
+- **조건부 UPDATE**: `WHERE remaining >= :amount` 원자적 차감
+- **SELECT FOR UPDATE**: 포인트 차감 시 행 잠금
+
+### 애플리케이션 레벨
+- **단일 트랜잭션**: 각 비즈니스 로직이 하나의 트랜잭션으로 완료
+- **명시적 중복 체크**: `existsByUserIdAndSpinDate` + UNIQUE 제약
+- **flush()**: `entityManager.flush()`로 UNIQUE 제약 즉시 확인
+
+---
+
+## 7. 미해결 이슈 / 보류 사항
+
+**보류: Codex MCP 코드 리뷰**
+- 상태: Codex CLI MCP 응답 없음 (Node.js 경고만 출력)
+- 시도: 3회 재시도 (모두 실패)
+- 리뷰 대상: 룰렛 동시성 검증 (existsByUserIdAndSpinDate + UNIQUE 제약 race condition)
+- 다음 조치: MCP 재연결 후 재시도 또는 수동 리뷰
+
+**기타 이슈:**
+- 없음
+
+---
+
+## 8. 현재 막힌 지점
+
+**막힌 지점 없음.**
+
+백엔드 코어 기능이 모두 완료되어 다음 단계(배포) 진행 가능.
+
+---
+
+## 9. 다음 세션 첫 액션
+
+### Option 1: 백엔드 배포 (권장)
+1. GitHub Actions CI/CD 설정
+   - `.github/workflows/backend-ci.yml` 생성
+   - 빌드/테스트 자동화
+2. Neon PostgreSQL 프로비저닝
+   - 무료 티어 설정
+   - 연결 문자열 발급
+3. Render/Railway 배포
+   - 환경변수 설정
+   - PostgreSQL 연결
+4. 배포 후 API 테스트
+   - Swagger UI 확인
+   - 주요 엔드포인트 수동 테스트
+
+### Option 2: 프론트엔드 구현
+- React + TypeScript + Vite 프로젝트 초기화
+- 사용자 웹 화면 구현 (룰렛, 포인트, 상품, 주문)
+
+### Option 3: Codex MCP 코드 리뷰 재시도
+- MCP 재연결 후 동시성 검증 리뷰
+
+---
+
+## 10. 기술 스택 (SSOT)
 
 | 항목 | 버전/기술 | 비고 |
 |---|---|---|
@@ -58,272 +197,100 @@
 | Java | **21 LTS** | SSOT 항목 |
 | Gradle | **8.12** (Kotlin DSL) | Wrapper로 관리 |
 | PostgreSQL | **16** | 로컬: Docker, 배포: Neon |
+| H2 | **인메모리** | 테스트 전용 |
 | Swagger UI | `/swagger-ui/index.html` | SpringDoc OpenAPI 3 |
-| 인증 방식 | **HTTP 세션 기반** | JWT 아님, 닉네임 mocking 로그인 |
-
-### 핵심 정책 (PDP)
-
-| # | 정책 | 구현 방법 |
-|---|---|---|
-| PDP-1 | Lazy 예산 리셋 | budget_date vs 오늘(KST) 비교, 다르면 새 행 생성 |
-| PDP-2 | 동적 만료 필터 | `expires_at > NOW()` 쿼리 조건 |
-| PDP-3 | FIFO 포인트 차감 | `ORDER BY expires_at ASC` + `SELECT FOR UPDATE` |
-| PDP-4 | 원래 포인트 복원 | balance 되돌림, 만료 상태는 사용 불가 |
-| PDP-5 | 당일만 예산 복구 | 취소일(KST) = 지급일이면 복구 |
-| PDP-6 | 예산 조건부 차감 | `UPDATE ... WHERE remaining >= :amount` |
-| PDP-7 | 닉네임 = 유저 ID | 자동 생성/로그인, 회원가입 없음 |
-| PDP-8 | 역할 완전 분리 | USER ↔ ADMIN 상호 403, `/api/auth/**` 공개 |
-
-### 동시성 전략
-
-- **중복 참여 방지**:
-  - 1차 방어: `existsByUserIdAndSpinDate` 명시적 체크
-  - 2차 방어: `UNIQUE(user_id, spin_date)` + `entityManager.flush()`
-- **예산 원자적 차감**: `UPDATE daily_budget SET remaining = remaining - :amount WHERE remaining >= :amount`
-- **재고 원자적 차감**: `UPDATE product SET stock = stock - 1 WHERE id = :id AND stock > 0`
-- **포인트 FIFO 차감**: `SELECT ... FOR UPDATE` + balance 차감
-- **JPA 쿼리 최적화**: `@Modifying(clearAutomatically = true, flushAutomatically = true)`
+| 인증 방식 | **HTTP 세션 기반** | JWT 아님 |
 
 ---
 
-## 4. Step 11 (룰렛 기능) 구현 상세
-
-### 구현 파일
+## 11. 주요 파일 구조
 
 ```
-backend/src/main/kotlin/com/roulette/domain/roulette/
-├── dto/
-│   ├── SpinResponse.kt
-│   └── RouletteStatusResponse.kt
-├── RouletteService.kt
-└── RouletteController.kt
+backend/
+├── src/main/kotlin/com/roulette/
+│   ├── RouletteApplication.kt
+│   ├── config/
+│   │   ├── SecurityConfig.kt
+│   │   └── AppProperties.kt
+│   ├── auth/
+│   │   ├── AuthController.kt
+│   │   └── AuthService.kt
+│   ├── common/
+│   │   ├── ApiResponse.kt
+│   │   ├── BusinessException.kt
+│   │   └── GlobalExceptionHandler.kt
+│   ├── domain/
+│   │   ├── user/
+│   │   ├── budget/
+│   │   ├── roulette/
+│   │   ├── point/
+│   │   ├── product/
+│   │   ├── order/
+│   │   └── admin/
+│   └── ...
+├── src/test/kotlin/com/roulette/
+│   └── ConcurrencyTest.kt (7개 시나리오)
+└── build.gradle.kts
 ```
-
-### 핵심 로직
-
-**RouletteService.spin(userId)**
-1. 중복 참여 체크: `existsByUserIdAndSpinDate` (명시적 검증)
-2. 랜덤 금액 생성: `Random.nextInt(100, 1001)`
-3. Lazy 예산 리셋: `getOrCreateTodayBudget(today)`
-4. 예산 원자적 차감: `decrementRemaining(today, amount)` → 0이면 `BUDGET_EXHAUSTED`
-5. RouletteHistory 저장 + `entityManager.flush()` → UNIQUE 위반 시 `ALREADY_PARTICIPATED`
-6. PointLedger 저장: `expiresAt = now + 30일`
-7. 잔여 예산 조회 후 응답
-
-**RouletteService.getStatus(userId)**
-- 오늘 참여 이력 조회
-- 오늘 예산 조회 (없으면 기본값 반환)
-
-### 동시성 처리
-
-- **1차 방어**: 트랜잭션 시작 시 DB 조회로 중복 체크
-- **2차 방어**: UNIQUE 제약 + flush로 동시 INSERT 차단
-- **예산 차감**: 조건부 UPDATE로 원자적 처리
-
-### 테스트 결과
-
-✅ **로그인** — 성공
-✅ **Status 조회** — 성공 (participated: false, remainingBudget: 100000)
-✅ **첫 번째 Spin** — 성공 (200p 당첨, remainingBudget: 98251)
-✅ **중복 Spin** — 에러 응답 정상 반환
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ALREADY_PARTICIPATED",
-    "message": "You have already participated in today's roulette"
-  }
-}
-```
-
-✅ **DB 중복 차단** — 확인 (user_id, spin_date별 1건만 존재)
 
 ---
 
-## 5. Step 12, 13 구현 상세
+## 12. 워크플로우 규칙
 
-### Step 12: 포인트 기능 (완료)
-
-**구현 파일:**
-```
-backend/src/main/kotlin/com/roulette/domain/point/
-├── PointLedger.kt (수정: type, issuedAt 필드 추가)
-├── PointLedgerRepository.kt (확장: 만료 예정/내역 쿼리 추가)
-├── PointService.kt
-├── PointController.kt
-└── dto/
-    ├── BalanceResponse.kt
-    └── PointHistoryResponse.kt
-```
-
-**API:**
-- GET /api/user/points/balance → 유효 포인트 합산 + 7일 이내 만료 예정
-- GET /api/user/points/history → 전체 내역 (페이지네이션)
-
-**테스트 결과:**
-- ✅ 잔액 조회: 330p (유효 포인트만)
-- ✅ 내역 조회: 1건 (type: EARN, expired: false)
-
-### Step 13: 상품 기능 (완료)
-
-**구현 파일:**
-```
-backend/src/main/kotlin/com/roulette/domain/product/
-├── ProductRepository.kt (확장: findAllByIsActiveTrueAndStockGreaterThan)
-├── ProductService.kt
-├── ProductController.kt
-└── dto/
-    └── ProductResponse.kt
-```
-
-**API:**
-- GET /api/user/products → 활성화 + 재고 있는 상품만 (stock > 0)
-- GET /api/user/products/{id} → 상품 상세 조회
-
-**테스트 결과:**
-- ✅ 목록 조회: 3개 상품 (재고 0 제외, 비활성 제외)
-- ✅ 상세 조회: 정상 동작
+- **단계별 확인 필수**: 각 단계 완료 후 요약 제시 → 사용자 확인 → 다음 단계
+- **SSOT 원칙**: `CLAUDE.md` > `docs/SPEC.md` 우선순위
+- **대화 로그**: `docs/PROMPT.md`에 원문 append, LAST_LOG_CURSOR로 중복 방지
 
 ---
 
-## 6. 미해결 이슈 / 보류 사항
-
-**없음.** 포인트, 상품 기능 모두 정상 동작.
-
----
-
-## 7. 현재 막힌 지점
-
-**막힌 지점 없음.** 다음 단계(주문 기능) 진행 가능.
-
----
-
-## 8. Step 14 (주문 기능) 구현 상세
-
-### 구현 파일
-```
-backend/src/main/kotlin/com/roulette/domain/order/
-├── dto/
-│   ├── CreateOrderRequest.kt
-│   ├── CreateOrderResponse.kt
-│   ├── OrderItemResponse.kt
-│   └── OrderListResponse.kt
-├── OrderService.kt
-└── OrderController.kt
-```
-
-### 핵심 로직
-
-**OrderService.createOrder(userId, productId)**
-1. Product 조회 및 재고 원자적 차감 (`decrementStock`)
-2. 유효 포인트 FIFO 조회 (`findAvailableByUserIdForUpdate` with `@Lock(PESSIMISTIC_WRITE)`)
-3. 포인트 부족 체크 → `INSUFFICIENT_POINTS`
-4. FIFO 순으로 balance 차감 (PointLedger.deduct() 활용)
-5. Order INSERT
-6. OrderPointUsage INSERT (N건)
-7. 잔여 잔액 조회 후 응답
-
-**OrderService.getOrders(userId, page, size)**
-- 페이지네이션 구현 (`findAllByUserIdOrderByCreatedAtDesc`)
-
-### 테스트 결과
-✅ 주문 생성 성공 (300p 상품)
-✅ FIFO 차감 정상 (id=1 PointLedger에서 300p 차감)
-✅ 재고 차감 정상 (5 → 4)
-✅ OrderPointUsage 기록 정상
-✅ 주문 목록 조회 정상
-✅ INSUFFICIENT_POINTS 에러 처리
-✅ PRODUCT_OUT_OF_STOCK 에러 처리
-
----
-
-## 9. 다음 세션 첫 액션: 어드민 API 구현
-
-### Step 15: 어드민 API 구현
-
-**구현할 API (8개):**
-
-1. **대시보드**: `GET /api/admin/dashboard`
-   - 전체 통계 조회 (총 사용자 수, 오늘 룰렛 참여 수, 오늘 예산 사용액, 총 주문 수)
-
-2. **예산 관리**:
-   - `GET /api/admin/budget` — 오늘 예산 조회
-   - `PUT /api/admin/budget` — 기본 예산 변경 (다음 날부터 적용)
-
-3. **상품 CRUD**:
-   - `POST /api/admin/products` — 상품 생성
-   - `PUT /api/admin/products/{id}` — 상품 수정
-   - `DELETE /api/admin/products/{id}` — 상품 삭제 (주문 내역 없을 때만)
-
-4. **주문 취소**: `POST /api/admin/orders/{id}/cancel`
-   - 특정 사용자의 주문 취소
-   - PointLedger balance 복원
-   - Product stock 복원
-
-5. **룰렛 취소**: `POST /api/admin/roulette/{id}/cancel`
-   - 특정 사용자의 룰렛 참여 취소
-   - 남은 포인트만 회수 (balance를 0으로)
-   - 당일 취소면 DailyBudget remaining 복구
-
-**구현 파일:**
-```
-backend/src/main/kotlin/com/roulette/domain/admin/
-├── AdminController.kt
-├── AdminService.kt
-└── dto/
-    ├── DashboardResponse.kt
-    ├── BudgetResponse.kt
-    ├── UpdateBudgetRequest.kt
-    ├── CreateProductRequest.kt
-    ├── UpdateProductRequest.kt
-    ├── CancelOrderResponse.kt
-    └── CancelRouletteResponse.kt
-```
-
-**검증:**
-- role=ADMIN만 접근 가능 (SecurityConfig)
-- 상품 삭제 시 주문 내역 체크
-- 룰렛 취소 시 부분 사용 허용
-- 당일/비당일 예산 복구 로직
-
----
-
-## 11. 워크플로우 규칙
-
-- **단계별 확인 필수**: 각 단계 완료 후 요약을 제시하고, 사용자 확인을 받은 뒤 다음 단계로 진행
-- **SSOT 원칙**: `CLAUDE.md` > `docs/SPEC.md` 우선순위. 버전/정책 등 SSOT 항목은 임의 변경 금지
-- **대화 로그**: `docs/PROMPT.md`에 가공 없이 원문 append, LAST_LOG_CURSOR로 중복 방지
-
----
-
-## 12. 참조 문서
+## 13. 참조 문서
 
 | 문서 | 경로 | 용도 |
 |---|---|---|
 | 프로젝트 규칙 | `CLAUDE.md` | 전체 정책/규칙/컨벤션 (SSOT) |
 | 확정 명세서 | `docs/SPEC.md` | 엔티티/API/화면/테스트 상세 |
 | 대화 로그 | `docs/PROMPT.md` | 원문 프롬프트/응답 기록 |
-| 구현 계획 | `~/.claude/plans/indexed-wondering-squirrel.md` | Phase 1 상세 계획 |
+| 인계 문서 | `docs/HANDOFF.md` | 세션 간 작업 인계 |
 
 ---
 
-## 10. 진행률
+## 14. 진행률
 
-**Phase 1 백엔드 코어: 66.7% 완료 (4/6 단계)**
+**Phase 1 백엔드 코어: 100% 완료 (6/6 단계) ✅**
 
 - ✅ Step 11: 룰렛 기능
 - ✅ Step 12: 포인트 기능
 - ✅ Step 13: 상품 기능
 - ✅ Step 14: 주문 기능
-- ⬜ Step 15: 어드민 API (다음 작업)
-- ⬜ Step 16: 동시성 테스트
+- ✅ Step 15: 어드민 API
+- ✅ Step 16: 동시성 테스트
 
-**API 구현 진행률: 8/19 API 완료 (42.1%)**
-- 인증: 1/1 (로그인)
-- 룰렛: 2/2 (참여, 상태 조회)
-- 포인트: 2/2 (잔액, 내역)
-- 상품: 2/3 (목록, 상세)
-- 주문: 2/3 (생성, 조회)
-- 어드민: 0/8
+**전체 프로젝트: ~30% 완료**
+- ✅ 백엔드 코어 (100%)
+- ⬜ 백엔드 배포 (0%)
+- ⬜ 프론트엔드 (0%)
+- ⬜ 모바일 (0%)
 
-**전체 프로젝트: ~16% 완료**
+---
+
+## 15. 빠른 명령어
+
+```bash
+# 로컬 DB 시작
+docker compose up -d
+
+# 백엔드 빌드
+cd backend && ./gradlew build
+
+# 테스트 실행
+./gradlew test
+
+# 동시성 테스트만
+./gradlew test --tests "com.roulette.ConcurrencyTest"
+
+# 서버 실행
+./gradlew bootRun
+
+# Swagger UI
+http://localhost:8080/swagger-ui/index.html
+```
