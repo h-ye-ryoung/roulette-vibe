@@ -23,11 +23,17 @@ data class PointItem(
     val type: String,
     val issuedAt: LocalDateTime,
     val expiresAt: LocalDateTime,
-    val expired: Boolean
+    val expired: Boolean,
+    val expiringSoon: Boolean
 ) {
     companion object {
         fun from(ledger: PointLedger): PointItem {
             val now = LocalDateTime.now()
+            val sevenDaysLater = now.plusDays(7)
+
+            val isExpired = ledger.expiresAt.isBefore(now)
+            val isExpiringSoon = !isExpired && ledger.expiresAt.isBefore(sevenDaysLater)
+
             return PointItem(
                 id = ledger.id!!,
                 amount = ledger.amount,
@@ -35,7 +41,8 @@ data class PointItem(
                 type = ledger.type.name,
                 issuedAt = ledger.issuedAt,
                 expiresAt = ledger.expiresAt,
-                expired = ledger.expiresAt.isBefore(now)
+                expired = isExpired,
+                expiringSoon = isExpiringSoon
             )
         }
     }

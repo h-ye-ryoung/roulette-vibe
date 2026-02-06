@@ -7,4 +7,5 @@ interface RouletteHistoryRepository : JpaRepository<RouletteHistory, Long> {
     fun existsByUserIdAndSpinDate(userId: Long, spinDate: LocalDate): Boolean
     fun findByUserIdAndSpinDate(userId: Long, spinDate: LocalDate): RouletteHistory?
     fun findAllByUserId(userId: Long): List<RouletteHistory>
+    fun countBySpinDate(spinDate: LocalDate): Long
 }

@@ -34,6 +34,11 @@ class ProductOutOfStockException : BusinessException(
     message = "Product is out of stock"
 )
 
+class ProductHasOrdersException : BusinessException(
+    code = "PRODUCT_HAS_ORDERS",
+    message = "Cannot delete product with existing orders"
+)
+
 class OrderNotFoundException : BusinessException(
     code = "ORDER_NOT_FOUND",
     message = "Order not found",

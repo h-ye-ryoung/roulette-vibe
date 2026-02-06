@@ -2,6 +2,7 @@ package com.roulette.domain.point
 
 import com.roulette.domain.point.dto.BalanceResponse
 import com.roulette.domain.point.dto.ExpiringPoint
+import com.roulette.domain.point.dto.ExpiringPointsResponse
 import com.roulette.domain.point.dto.PointHistoryResponse
 import com.roulette.domain.point.dto.PointItem
 import org.springframework.data.domain.PageRequest
@@ -43,6 +44,34 @@ class PointService(
         return BalanceResponse(
             totalBalance = totalBalance,
             expiringPoints = expiringPointsList
+        )
+    }
+
+    /**
+     * 7일 내 만료 예정 포인트 조회
+     */
+    fun getExpiringPoints(userId: Long): ExpiringPointsResponse {
+        val now = LocalDateTime.now()
+        val expiringThreshold = now.plusDays(7)
+
+        // 7일 이내 만료 예정 포인트
+        val expiringPointsList = pointLedgerRepository.findExpiringPoints(
+            userId = userId,
+            now = now,
+            expiringThreshold = expiringThreshold
+        ).map { ledger ->
+            ExpiringPoint(
+                id = ledger.id!!,
+                balance = ledger.balance,
+                expiresAt = ledger.expiresAt
+            )
+        }
+
+        val totalExpiringBalance = expiringPointsList.sumOf { it.balance }
+
+        return ExpiringPointsResponse(
+            expiringPoints = expiringPointsList,
+            totalExpiringBalance = totalExpiringBalance
         )
     }
 

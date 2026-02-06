@@ -24,4 +24,8 @@ class DailyBudget(
     val id: Long = 0
 
     fun canDeduct(amount: Int): Boolean = remaining >= amount
+
+    fun restore(amount: Int) {
+        remaining = minOf(remaining + amount, dailyLimit)
+    }
 }
