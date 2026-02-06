@@ -1988,3 +1988,396 @@ Action 1부터 시작할까요?
 ---
 
 <!-- LAST_LOG_CURSOR: 2026-02-06T15:50:00+09:00 -->
+
+## 세션 4: 주문 기능 구현 (2026-02-06T16:00~16:05)
+
+### User
+
+handoff.md를 업데이트하고 주문 기능을 시작해
+
+### Assistant
+
+HANDOFF.md 진행률 섹션을 업데이트하겠습니다.
+
+**수정 내용:**
+- Phase 1 백엔드 코어: 16.7% → 50% (3/6 단계 완료)
+- Step 12, 13 체크 완료 표시
+- API 구현 진행률 추가: 6/19 (31.6%)
+- 타임스탬프 업데이트: 2026-02-06T16:00:00+09:00
+
+**커밋:**
+```bash
+git commit -m "docs: HANDOFF.md 업데이트 (Steps 12-13 완료 반영)"
+```
+
+이제 주문 기능(Step 14) 구현을 시작합니다.
+
+**SPEC.md 확인:**
+- POST /api/user/orders - 상품 주문 (FIFO 포인트 차감)
+- GET /api/user/orders - 주문 내역 조회 (페이지네이션)
+
+**구현 계획:**
+
+1. **DTOs 생성**
+   - CreateOrderRequest.kt
+   - CreateOrderResponse.kt
+   - OrderItemResponse.kt
+   - OrderListResponse.kt
+
+2. **OrderRepository 확장**
+   - findAllByUserIdOrderByCreatedAtDesc (페이지네이션)
+
+3. **OrderService 구현**
+   - createOrder(userId, productId): 단일 트랜잭션 내
+     1. Product 조회 및 재고 원자적 차감
+     2. 유효 포인트 FIFO 조회 (SELECT FOR UPDATE)
+     3. 포인트 부족 체크
+     4. FIFO 순 balance 차감 (N개 PointLedger UPDATE)
+     5. Order INSERT
+     6. OrderPointUsage INSERT (N건)
+   - getOrders(userId, page, size): 페이지네이션
+
+4. **OrderController 구현**
+   - POST /api/user/orders
+   - GET /api/user/orders
+
+**구현 시작:**
+
+CreateOrderRequest.kt, CreateOrderResponse.kt, OrderItemResponse.kt, OrderListResponse.kt 생성 완료.
+
+OrderRepository에 findAllByUserIdOrderByCreatedAtDesc 메서드 추가 완료.
+
+OrderService 구현:
+- createOrder: FIFO 포인트 차감 로직 구현
+- PointLedger.deduct() 메서드 활용
+- nullable ID 처리 추가 (pointLedger.id ?: throw IllegalStateException)
+- getOrders: 페이지네이션 구현
+
+OrderController 구현:
+- POST /api/user/orders
+- GET /api/user/orders
+- @AuthenticationPrincipal SessionUser 활용
+
+**빌드 및 테스트:**
+
+빌드 성공, 서버 재시작 완료.
+
+**테스트 1: INSUFFICIENT_POINTS 에러**
+
+testuser2 (330 포인트) 로그인 후 4500포인트 상품 주문 시도:
+```json
+{"success":false,"data":null,"error":{"code":"INSUFFICIENT_POINTS","message":"Not enough points"}}
+```
+✅ INSUFFICIENT_POINTS 에러 정상 동작
+
+**테스트 2: 주문 생성 성공**
+
+300포인트 상품 (초콜릿 세트) 추가 후 주문:
+```json
+{"success":true,"data":{"orderId":1,"productName":"초콜릿 세트","totalPrice":300,"remainingBalance":30},"error":null}
+```
+✅ 주문 생성 성공
+✅ 잔액 정상: 330 - 300 = 30
+
+**테스트 3: 주문 목록 조회**
+
+```json
+{"success":true,"data":{"orders":[{"id":1,"productName":"초콜릿 세트","totalPrice":300,"status":"COMPLETED","createdAt":"2026-02-06T16:02:32.627002","cancelledAt":null}],"page":0,"size":20,"totalElements":1},"error":null}
+```
+✅ 주문 목록 조회 성공
+
+**테스트 4: 포인트 차감 확인**
+
+포인트 잔액: 30p
+재고: 5 → 4
+✅ 포인트 및 재고 차감 정상
+
+**테스트 5: FIFO 차감 및 OrderPointUsage 확인**
+
+PointLedger: id=1, amount=330, balance=30 (300 차감)
+OrderPointUsage: order_id=1, point_ledger_id=1, used_amount=300
+✅ FIFO 차감 및 기록 정상
+
+**테스트 6: PRODUCT_OUT_OF_STOCK 에러**
+
+testbuyer (659p) 생성 후 stock=0 상품 주문 시도:
+```json
+{"success":false,"data":null,"error":{"code":"PRODUCT_OUT_OF_STOCK","message":"Product is out of stock"}}
+```
+✅ PRODUCT_OUT_OF_STOCK 에러 정상 동작
+
+**커밋:**
+
+```bash
+git commit -m "feat: 주문 기능 완성 (Step 14 완료)"
+```
+
+**구현 완료 요약:**
+
+✅ 주문 기능 구현 완료 (Step 14)
+
+테스트 결과:
+- ✅ 주문 생성 성공
+- ✅ FIFO 차감 정상
+- ✅ 재고 차감 정상
+- ✅ OrderPointUsage 기록 정상
+- ✅ 주문 목록 조회 정상
+- ✅ INSUFFICIENT_POINTS 에러 처리
+- ✅ PRODUCT_OUT_OF_STOCK 에러 처리
+
+진행률:
+- Phase 1 백엔드 코어: 66.7% 완료 (4/6 단계)
+- API 구현: 8/19 완료 (42.1%)
+
+다음 작업: Step 15 (어드민 API)
+
+### User
+
+LAST_LOG_CURSOR 이후의 프롬프트와 응답을
+가공 없이 docs/PROMPT.md에 append 하고
+커서를 현재 시점으로 업데이트해줘
+
+---
+
+<!-- LAST_LOG_CURSOR: 2026-02-06T16:05:00+09:00 -->
+
+## 세션 5: 어드민 API 구현 시작 (2026-02-06T16:10~16:20)
+
+### User
+
+다음 구현 순서는 어떻게돼?
+
+### Assistant
+
+HANDOFF.md를 확인해서 다음 구현 순서를 알려드리겠습니다.
+
+**현재 완료된 작업:**
+- ✅ Step 11: 룰렛 기능
+- ✅ Step 12: 포인트 기능
+- ✅ Step 13: 상품 기능
+- ✅ Step 14: 주문 기능 (방금 완료)
+
+**진행률**: Phase 1 백엔드 코어 66.7% (4/6 단계)
+**API 구현**: 8/19 완료 (42.1%)
+
+**다음 구현 순서:**
+
+1. **Step 15: 어드민 API 구현** ← 다음 작업
+   - GET /api/admin/dashboard
+   - GET /api/admin/budget
+   - PUT /api/admin/budget
+   - POST /api/admin/products
+   - PUT /api/admin/products/{id}
+   - DELETE /api/admin/products/{id}
+   - POST /api/admin/orders/{id}/cancel
+   - POST /api/admin/roulette/{id}/cancel
+
+2. **Step 16: 동시성 테스트** (T-1~T-7)
+
+3. **Phase 2: 백엔드 배포**
+
+4. **Phase 3-6: 프론트엔드/어드민/모바일**
+
+Step 15 (어드민 API)를 시작할까요?
+
+### User
+
+handoff.md를 업데이트하고 다음 순서를 진행해.
+
+### Assistant
+
+HANDOFF.md를 업데이트하고 Step 15 (어드민 API)를 시작하겠습니다.
+
+**HANDOFF.md 업데이트:**
+- 타임스탬프: 2026-02-06T16:10:00+09:00
+- Step 14 (주문 기능) 완료 표시
+- Phase 1 백엔드 코어: 50% → 66.7% (4/6 단계)
+- API 구현 진행률: 6/19 → 8/19 (42.1%)
+- 다음 작업: Step 15 (어드민 API)
+
+**커밋:**
+```bash
+git commit -m "docs: HANDOFF.md 업데이트 (Step 14 완료 반영)"
+```
+
+**Step 15 (어드민 API) 구현 시작:**
+
+SPEC.md 확인 완료. 구현할 API:
+1. GET /api/admin/dashboard — 대시보드 통계
+2. GET /api/admin/budget — 예산 조회
+3. PUT /api/admin/budget — 예산 변경
+4. GET /api/admin/products — 전체 상품 목록
+5. POST /api/admin/products — 상품 등록
+6. PUT /api/admin/products/{id} — 상품 수정
+7. DELETE /api/admin/products/{id} — 상품 삭제
+8. GET /api/admin/orders — 전체 주문 내역
+9. POST /api/admin/orders/{id}/cancel — 주문 취소
+10. GET /api/admin/roulette/history — 룰렛 참여 내역
+11. POST /api/admin/roulette/{id}/cancel — 룰렛 취소
+
+**DTO 생성 완료:**
+- DashboardResponse.kt
+- BudgetResponse.kt
+- UpdateBudgetRequest.kt
+- UpdateBudgetResponse.kt
+- CreateProductRequest.kt
+- UpdateProductRequest.kt
+- DeleteProductResponse.kt
+- CancelOrderResponse.kt
+- CancelRouletteResponse.kt
+
+### User
+
+일단 1~3번까지만 구현하고 알려줘.
+
+### Assistant
+
+알겠습니다. 1~3번 API만 구현하겠습니다:
+1. GET /api/admin/dashboard
+2. GET /api/admin/budget
+3. PUT /api/admin/budget
+
+**RouletteHistoryRepository 확장:**
+```kotlin
+fun countBySpinDate(spinDate: LocalDate): Long
+```
+
+**AdminService 구현 (AdminService.kt):**
+```kotlin
+@Service
+class AdminService(
+    private val dailyBudgetRepository: DailyBudgetRepository,
+    private val rouletteHistoryRepository: RouletteHistoryRepository,
+    @Value("\${app.daily-budget-default:100000}") private val defaultDailyBudget: Int
+) {
+    private val kstZone = ZoneId.of("Asia/Seoul")
+
+    @Transactional(readOnly = true)
+    fun getDashboard(): DashboardResponse {
+        val today = LocalDate.now(kstZone)
+        val budget = dailyBudgetRepository.findByBudgetDate(today)
+
+        return if (budget != null) {
+            val participantCount = rouletteHistoryRepository.countBySpinDate(today)
+            DashboardResponse(
+                budgetDate = budget.budgetDate,
+                dailyLimit = budget.dailyLimit,
+                remaining = budget.remaining,
+                usedAmount = budget.dailyLimit - budget.remaining,
+                participantCount = participantCount.toInt()
+            )
+        } else {
+            DashboardResponse(
+                budgetDate = today,
+                dailyLimit = defaultDailyBudget,
+                remaining = defaultDailyBudget,
+                usedAmount = 0,
+                participantCount = 0
+            )
+        }
+    }
+
+    @Transactional(readOnly = true)
+    fun getBudget(): BudgetResponse {
+        val today = LocalDate.now(kstZone)
+        val budget = dailyBudgetRepository.findByBudgetDate(today)
+
+        return if (budget != null) {
+            BudgetResponse(
+                budgetDate = budget.budgetDate,
+                dailyLimit = budget.dailyLimit,
+                remaining = budget.remaining
+            )
+        } else {
+            BudgetResponse(
+                budgetDate = today,
+                dailyLimit = defaultDailyBudget,
+                remaining = defaultDailyBudget
+            )
+        }
+    }
+
+    @Transactional
+    fun updateBudget(request: UpdateBudgetRequest): UpdateBudgetResponse {
+        val today = LocalDate.now(kstZone)
+        val tomorrow = today.plusDays(1)
+
+        val existingBudget = dailyBudgetRepository.findByBudgetDate(tomorrow)
+
+        if (existingBudget != null) {
+            val updated = DailyBudget(
+                budgetDate = existingBudget.budgetDate,
+                dailyLimit = request.dailyLimit,
+                remaining = request.dailyLimit
+            )
+            dailyBudgetRepository.delete(existingBudget)
+            dailyBudgetRepository.save(updated)
+        } else {
+            val newBudget = DailyBudget(
+                budgetDate = tomorrow,
+                dailyLimit = request.dailyLimit,
+                remaining = request.dailyLimit
+            )
+            dailyBudgetRepository.save(newBudget)
+        }
+
+        return UpdateBudgetResponse(
+            dailyLimit = request.dailyLimit,
+            effectiveFrom = tomorrow
+        )
+    }
+}
+```
+
+**AdminController 구현 (AdminController.kt):**
+```kotlin
+@RestController
+@RequestMapping("/api/admin")
+class AdminController(
+    private val adminService: AdminService
+) {
+    @GetMapping("/dashboard")
+    fun getDashboard(): ApiResponse<DashboardResponse> {
+        val response = adminService.getDashboard()
+        return ApiResponse.success(response)
+    }
+
+    @GetMapping("/budget")
+    fun getBudget(): ApiResponse<BudgetResponse> {
+        val response = adminService.getBudget()
+        return ApiResponse.success(response)
+    }
+
+    @PutMapping("/budget")
+    fun updateBudget(
+        @Valid @RequestBody request: UpdateBudgetRequest
+    ): ApiResponse<UpdateBudgetResponse> {
+        val response = adminService.updateBudget(request)
+        return ApiResponse.success(response)
+    }
+}
+```
+
+**빌드 에러 수정:**
+1. DailyBudget은 data class가 아니므로 copy() 사용 불가 → delete + save로 변경
+2. UpdateProductRequest의 ProductStatus → isActive Boolean으로 변경
+
+**빌드 결과:**
+✅ BUILD SUCCESSFUL
+
+**구현 완료 요약:**
+- ✅ GET /api/admin/dashboard — 오늘 예산 현황, 참여자 수 조회
+- ✅ GET /api/admin/budget — 오늘 예산 조회
+- ✅ PUT /api/admin/budget — 예산 변경 (다음 날부터 적용)
+
+다음 단계: 서버 재시작 후 테스트 필요
+
+### User
+
+LAST_LOG_CURSOR 이후의 프롬프트와 응답을
+가공 없이 docs/PROMPT.md에 append 하고
+커서를 현재 시점으로 업데이트해줘
+
+---
+
+<!-- LAST_LOG_CURSOR: 2026-02-06T16:20:00+09:00 -->
