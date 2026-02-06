@@ -9,7 +9,7 @@ interface ProductRepository : JpaRepository<Product, Long> {
 
     fun findAllByIsActiveTrue(): List<Product>
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         UPDATE Product p
         SET p.stock = p.stock - 1
@@ -17,7 +17,7 @@ interface ProductRepository : JpaRepository<Product, Long> {
     """)
     fun decrementStock(@Param("productId") productId: Long): Int
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         UPDATE Product p
         SET p.stock = p.stock + 1

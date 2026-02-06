@@ -25,3 +25,7 @@ springdoc:
     path: /swagger-ui/index.html
   api-docs:
     path: /api-docs
+
+logging:
+  level:
+    com.roulette: DEBUG
