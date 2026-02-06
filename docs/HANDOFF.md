@@ -1,6 +1,6 @@
 # HANDOFF.md — 세션 인계 문서
 
-> **최종 갱신**: 2026-02-06T16:00:00+09:00
+> **최종 갱신**: 2026-02-06T16:10:00+09:00
 
 ---
 
@@ -22,7 +22,8 @@
 | 12 | **룰렛 기능 구현 (Step 11)** | ✅ 완료 | RouletteService, RouletteController, DTO, 중복 방지 로직 |
 | 13 | **포인트 기능 구현 (Step 12)** | ✅ 완료 | PointService, PointController, DTO, 잔액/내역 조회, PointLedger에 type/issuedAt 추가 |
 | 14 | **상품 기능 구현 (Step 13)** | ✅ 완료 | ProductService, ProductController, DTO, 재고 필터링 (stock > 0) |
-| 15 | 대화 로그 기록 | 완료 | `docs/PROMPT.md` (커서: `2026-02-06T15:50:00+09:00`) |
+| 15 | **주문 기능 구현 (Step 14)** | ✅ 완료 | OrderService, OrderController, DTO, FIFO 포인트 차감, 원자적 재고 관리 |
+| 16 | 대화 로그 기록 | 완료 | `docs/PROMPT.md` (커서: `2026-02-06T16:05:00+09:00`) |
 
 ---
 
@@ -35,8 +36,8 @@
 | ~~P0~~ | ~~Step 11: 룰렛 기능 구현~~ | ✅ 완료 |
 | ~~P0~~ | ~~Step 12: 포인트 기능 구현~~ | ✅ 완료 |
 | ~~P0~~ | ~~Step 13: 상품 기능 구현~~ | ✅ 완료 |
-| **P0** | Step 14: 주문 기능 구현 (사용자: 생성/조회만, 취소 불가) | 대기 중 (다음 작업) |
-| **P0** | Step 15: 어드민 API 구현 (대시보드, 예산, 상품CRUD+DELETE, 주문/룰렛 취소) | 대기 중 |
+| ~~P0~~ | ~~Step 14: 주문 기능 구현 (사용자: 생성/조회만, 취소 불가)~~ | ✅ 완료 |
+| **P0** | Step 15: 어드민 API 구현 (대시보드, 예산, 상품CRUD+DELETE, 주문/룰렛 취소) | 대기 중 (다음 작업) |
 | **P0** | Step 16: 동시성 테스트 (T-1~T-7) | 대기 중 |
 | P1 | Phase 2: 백엔드 배포 | Render/Railway + Neon + GitHub Actions CI/CD |
 | P2 | Phase 3: 프론트엔드(사용자) 구현 | React + TypeScript + Vite + TanStack Query + Tailwind |
@@ -197,103 +198,97 @@ backend/src/main/kotlin/com/roulette/domain/product/
 
 ---
 
-## 8. 다음 세션 첫 액션: 주문 기능 구현
+## 8. Step 14 (주문 기능) 구현 상세
 
-### Action 1: 포인트 기능 구현 (PointService, PointController)
+### 구현 파일
+```
+backend/src/main/kotlin/com/roulette/domain/order/
+├── dto/
+│   ├── CreateOrderRequest.kt
+│   ├── CreateOrderResponse.kt
+│   ├── OrderItemResponse.kt
+│   └── OrderListResponse.kt
+├── OrderService.kt
+└── OrderController.kt
+```
 
-**구현 내용:**
-- `PointService.getBalance(userId: Long)`
-  - `expires_at > NOW()` 조건으로 유효 포인트만 합산
-  - 만료 임박 포인트 목록 (7일 이내)
-  - 응답: `{ totalBalance: Int, expiringPoints: List<{amount, expiresAt}> }`
+### 핵심 로직
 
-- `PointService.getHistory(userId: Long, page: Int, size: Int)`
-  - PointLedger 전체 내역 조회 (페이지네이션)
-  - 응답: `{ items: [...], totalCount, currentPage, totalPages }`
+**OrderService.createOrder(userId, productId)**
+1. Product 조회 및 재고 원자적 차감 (`decrementStock`)
+2. 유효 포인트 FIFO 조회 (`findAvailableByUserIdForUpdate` with `@Lock(PESSIMISTIC_WRITE)`)
+3. 포인트 부족 체크 → `INSUFFICIENT_POINTS`
+4. FIFO 순으로 balance 차감 (PointLedger.deduct() 활용)
+5. Order INSERT
+6. OrderPointUsage INSERT (N건)
+7. 잔여 잔액 조회 후 응답
 
-**구현 파일:**
-- `backend/src/main/kotlin/com/roulette/domain/point/PointService.kt`
-- `backend/src/main/kotlin/com/roulette/domain/point/PointController.kt`
-- `backend/src/main/kotlin/com/roulette/domain/point/dto/BalanceResponse.kt`
-- `backend/src/main/kotlin/com/roulette/domain/point/dto/PointHistoryResponse.kt`
+**OrderService.getOrders(userId, page, size)**
+- 페이지네이션 구현 (`findAllByUserIdOrderByCreatedAtDesc`)
 
-**API:**
-- `GET /api/user/points/balance` → `{ totalBalance, expiringPoints: [...] }`
-- `GET /api/user/points/history?page=0&size=20` → `{ items: [...], totalCount, ... }`
-
-**검증:**
-- 단위 테스트: 만료 포인트 제외 확인
-- 통합 테스트: 실제 DB 조회 결과 검증
-- API 테스트: curl로 잔액 조회 확인
-
----
-
-### Action 2: 상품 기능 구현 (ProductService, ProductController)
-
-**구현 내용:**
-- `ProductService.getProducts(isActive: Boolean = true)`
-  - `isActive` 필터 적용
-  - 활성화된 상품만 반환 (기본값)
-
-- `ProductService.getProduct(id: Long)`
-  - 상품 상세 정보 조회
-  - 존재하지 않으면 `PRODUCT_NOT_FOUND`
-
-**구현 파일:**
-- `backend/src/main/kotlin/com/roulette/domain/product/ProductService.kt`
-- `backend/src/main/kotlin/com/roulette/domain/product/ProductController.kt`
-- `backend/src/main/kotlin/com/roulette/domain/product/dto/ProductListResponse.kt`
-- `backend/src/main/kotlin/com/roulette/domain/product/dto/ProductDetailResponse.kt`
-
-**API:**
-- `GET /api/user/products` → `{ items: [...] }`
-- `GET /api/user/products/{id}` → `{ id, name, price, stock, ... }`
-
-**검증:**
-- `isActive=true` 필터 동작 확인
-- 재고 0인 상품도 목록에 표시되는지 확인
+### 테스트 결과
+✅ 주문 생성 성공 (300p 상품)
+✅ FIFO 차감 정상 (id=1 PointLedger에서 300p 차감)
+✅ 재고 차감 정상 (5 → 4)
+✅ OrderPointUsage 기록 정상
+✅ 주문 목록 조회 정상
+✅ INSUFFICIENT_POINTS 에러 처리
+✅ PRODUCT_OUT_OF_STOCK 에러 처리
 
 ---
 
-### Action 3: 주문 기능 구현 (OrderService, OrderController) — 가장 복잡
+## 9. 다음 세션 첫 액션: 어드민 API 구현
 
-**구현 내용:**
-- `OrderService.createOrder(userId: Long, productId: Long)`
-  - **단일 트랜잭션 내:**
-    1. Product 조회 + 재고 원자적 차감 (`decrementStock`)
-    2. 유효 포인트 FIFO 조회 (`findAvailableByUserIdForUpdate`)
-    3. 포인트 부족 체크 → `INSUFFICIENT_POINTS`
-    4. FIFO 순으로 balance 차감 (N개 PointLedger UPDATE)
-    5. Order INSERT
-    6. OrderPointUsage INSERT (N건)
+### Step 15: 어드민 API 구현
 
-- `OrderService.cancelOrder(userId: Long, orderId: Long)`
-  - **단일 트랜잭션 내:**
-    1. Order 조회 + 권한 체크
-    2. 이미 취소 체크 → `ORDER_ALREADY_CANCELLED`
-    3. Order 상태 → `CANCELLED`
-    4. OrderPointUsage 조회 → PointLedger balance 복원
-    5. Product stock 복원
+**구현할 API (8개):**
+
+1. **대시보드**: `GET /api/admin/dashboard`
+   - 전체 통계 조회 (총 사용자 수, 오늘 룰렛 참여 수, 오늘 예산 사용액, 총 주문 수)
+
+2. **예산 관리**:
+   - `GET /api/admin/budget` — 오늘 예산 조회
+   - `PUT /api/admin/budget` — 기본 예산 변경 (다음 날부터 적용)
+
+3. **상품 CRUD**:
+   - `POST /api/admin/products` — 상품 생성
+   - `PUT /api/admin/products/{id}` — 상품 수정
+   - `DELETE /api/admin/products/{id}` — 상품 삭제 (주문 내역 없을 때만)
+
+4. **주문 취소**: `POST /api/admin/orders/{id}/cancel`
+   - 특정 사용자의 주문 취소
+   - PointLedger balance 복원
+   - Product stock 복원
+
+5. **룰렛 취소**: `POST /api/admin/roulette/{id}/cancel`
+   - 특정 사용자의 룰렛 참여 취소
+   - 남은 포인트만 회수 (balance를 0으로)
+   - 당일 취소면 DailyBudget remaining 복구
 
 **구현 파일:**
-- `backend/src/main/kotlin/com/roulette/domain/order/OrderService.kt`
-- `backend/src/main/kotlin/com/roulette/domain/order/OrderController.kt`
-- DTO: `CreateOrderRequest`, `OrderResponse`, `OrderListResponse`
-
-**API:**
-- `POST /api/user/orders` → `{ orderId, totalPrice, usedPoints }`
-- `POST /api/user/orders/{id}/cancel` → `{ success, refundedPoints }`
-- `GET /api/user/orders` → `{ items: [...] }`
+```
+backend/src/main/kotlin/com/roulette/domain/admin/
+├── AdminController.kt
+├── AdminService.kt
+└── dto/
+    ├── DashboardResponse.kt
+    ├── BudgetResponse.kt
+    ├── UpdateBudgetRequest.kt
+    ├── CreateProductRequest.kt
+    ├── UpdateProductRequest.kt
+    ├── CancelOrderResponse.kt
+    └── CancelRouletteResponse.kt
+```
 
 **검증:**
-- 재고 0 → `PRODUCT_OUT_OF_STOCK`
-- 포인트 부족 → `INSUFFICIENT_POINTS`
-- FIFO 차감 순서 확인
-- 취소 후 잔액 복원 확인
+- role=ADMIN만 접근 가능 (SecurityConfig)
+- 상품 삭제 시 주문 내역 체크
+- 룰렛 취소 시 부분 사용 허용
+- 당일/비당일 예산 복구 로직
 
 ---
 
-## 8. 워크플로우 규칙
+## 11. 워크플로우 규칙
 
 - **단계별 확인 필수**: 각 단계 완료 후 요약을 제시하고, 사용자 확인을 받은 뒤 다음 단계로 진행
 - **SSOT 원칙**: `CLAUDE.md` > `docs/SPEC.md` 우선순위. 버전/정책 등 SSOT 항목은 임의 변경 금지
@@ -301,7 +296,7 @@ backend/src/main/kotlin/com/roulette/domain/product/
 
 ---
 
-## 9. 참조 문서
+## 12. 참조 문서
 
 | 문서 | 경로 | 용도 |
 |---|---|---|
@@ -314,21 +309,21 @@ backend/src/main/kotlin/com/roulette/domain/product/
 
 ## 10. 진행률
 
-**Phase 1 백엔드 코어: 50% 완료 (3/6 단계)**
+**Phase 1 백엔드 코어: 66.7% 완료 (4/6 단계)**
 
 - ✅ Step 11: 룰렛 기능
 - ✅ Step 12: 포인트 기능
 - ✅ Step 13: 상품 기능
-- ⬜ Step 14: 주문 기능 (다음 작업)
-- ⬜ Step 15: 어드민 API
+- ✅ Step 14: 주문 기능
+- ⬜ Step 15: 어드민 API (다음 작업)
 - ⬜ Step 16: 동시성 테스트
 
-**API 구현 진행률: 6/19 API 완료 (31.6%)**
+**API 구현 진행률: 8/19 API 완료 (42.1%)**
 - 인증: 1/1 (로그인)
 - 룰렛: 2/2 (참여, 상태 조회)
 - 포인트: 2/2 (잔액, 내역)
 - 상품: 2/3 (목록, 상세)
-- 주문: 0/3
+- 주문: 2/3 (생성, 조회)
 - 어드민: 0/8
 
-**전체 프로젝트: ~12% 완료**
+**전체 프로젝트: ~16% 완료**
