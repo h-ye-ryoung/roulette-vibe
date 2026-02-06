@@ -68,15 +68,14 @@ class OrderService(
         for (pointLedger in availablePoints) {
             if (remainingAmount <= 0) break
 
-            val deductAmount = minOf(pointLedger.balance, remainingAmount)
-            pointLedger.balance -= deductAmount
+            val deductAmount = pointLedger.deduct(remainingAmount)
             remainingAmount -= deductAmount
 
             // OrderPointUsage 레코드 생성 (나중에 일괄 저장)
             usages.add(
                 OrderPointUsage(
                     orderId = 0, // 임시, Order 저장 후 업데이트
-                    pointLedgerId = pointLedger.id,
+                    pointLedgerId = pointLedger.id ?: throw IllegalStateException("PointLedger ID is null"),
                     usedAmount = deductAmount
                 )
             )
