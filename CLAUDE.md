@@ -42,7 +42,7 @@
 | PDP-2 | 포인트 만료 | **동적 필터** — `expires_at > NOW()` 조건으로 유효분만 사용. 배치 불필요 |
 | PDP-3 | 포인트 차감 순서 | **FIFO** — `expires_at ASC` 순. 만료 임박 포인트 먼저 소진 |
 | PDP-4 | 환불 포인트 유효기간 | **원래 포인트 복원** — balance 되돌림. 이미 만료된 포인트는 복원되어도 사용 불가 |
-| PDP-5 | 룰렛 취소 시 예산 복구 | **당일만 복구** — 취소일(KST) = 지급일이면 예산 복구. 다른 날이면 복구 안 함 |
+| PDP-5 | 룰렛 취소 시 예산 복구 | **당일만 복구** — 취소일(KST) = 지급일이면 예산 복구. 다른 날이면 복구 안 함. 이미 사용된 포인트는 회수하지 않음 (balance만 확인) |
 | PDP-6 | 예산 < 당첨금 | 랜덤 금액 결정 후 `remaining >= amount` 조건 차감. 실패 시 "예산 소진". 잔여 100p 미만이면 소진 상태 |
 | PDP-7 | 유저 식별 | **닉네임 = 유저 ID** — 자동 생성/로그인. 별도 회원가입 없음 |
 | PDP-8 | 역할 기반 접근 제어 | **role(USER/ADMIN)별 API/화면 완전 분리** — 아래 상세 참조 |
@@ -120,8 +120,8 @@
 | 경로 | 접근 권한 | 설명 |
 |---|---|---|
 | `/api/auth/**` | 누구나 | 로그인 등 인증 |
-| `/api/user/**` | role=USER만 | 룰렛, 포인트, 상품, 주문 |
-| `/api/admin/**` | role=ADMIN만 | 대시보드, 예산, 상품CRUD, 취소/환불 |
+| `/api/user/**` | role=USER만 | 룰렛, 포인트, 상품 조회, 주문 생성/조회 (취소 불가) |
+| `/api/admin/**` | role=ADMIN만 | 대시보드, 예산, 상품CRUD(생성/수정/삭제), 주문 취소/환불, 룰렛 취소 |
 
 ### 응답 포맷
 
@@ -135,7 +135,7 @@
 
 ### 에러 코드 (구분 가능)
 
-`ALREADY_PARTICIPATED`, `BUDGET_EXHAUSTED`, `INSUFFICIENT_POINTS`, `PRODUCT_NOT_FOUND`, `PRODUCT_OUT_OF_STOCK`, `ORDER_NOT_FOUND`, `ORDER_ALREADY_CANCELLED`, `ROULETTE_NOT_FOUND`, `ROULETTE_ALREADY_CANCELLED`, `ROULETTE_POINTS_USED`, `FORBIDDEN`, `UNAUTHORIZED`
+`ALREADY_PARTICIPATED`, `BUDGET_EXHAUSTED`, `INSUFFICIENT_POINTS`, `PRODUCT_NOT_FOUND`, `PRODUCT_OUT_OF_STOCK`, `PRODUCT_HAS_ORDERS`, `ORDER_NOT_FOUND`, `ORDER_ALREADY_CANCELLED`, `ROULETTE_NOT_FOUND`, `ROULETTE_ALREADY_CANCELLED`, `FORBIDDEN`, `UNAUTHORIZED`
 
 ---
 
@@ -145,9 +145,10 @@
 |---|---|
 | 자정(KST) 전후 요청 | 트랜잭션 시작 시점의 KST 날짜 사용 |
 | 어드민 예산 변경 | **다음 날부터 적용**. 당일 remaining 변경 안 함 |
-| 룰렛 취소 시 포인트 일부 사용 | 취소 거부 (`ROULETTE_POINTS_USED`). 주문 먼저 취소 안내 |
+| 룰렛 취소 시 포인트 일부 사용 | 남은 포인트만 회수 (balance를 0으로). 이미 사용된 포인트는 그대로 유지 |
 | 주문 취소 후 포인트 만료 상태 | balance 복원하지만 사용 불가 (만료 상태) |
 | 예산 잔여 100p 미만 | 실질적 소진 상태. 룰렛 참여 시 `BUDGET_EXHAUSTED` |
+| 상품 삭제 시 주문 내역 존재 | 삭제 거부 (`PRODUCT_HAS_ORDERS`). 주문이 없어야 삭제 가능 |
 
 ---
 
@@ -184,7 +185,7 @@
 | T-4 | 동일 상품(재고 1) 3명 동시 주문 | 1건만 성공 |
 | T-5 | 만료 포인트로 주문 시도 | INSUFFICIENT_POINTS |
 | T-6 | 주문 취소 후 포인트 잔액 복원 | balance 정확히 복원 |
-| T-7 | 룰렛 취소 시 포인트 사용 중 | ROULETTE_POINTS_USED |
+| T-7 | 룰렛 취소 시 포인트 부분 사용 | 남은 포인트(balance)만 회수, 사용된 포인트는 유지 |
 
 ### 커버리지 목표
 - 핵심 비즈니스 로직: 90% 이상

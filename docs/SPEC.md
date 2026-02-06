@@ -224,11 +224,11 @@ Product ──1:N──> Order
 | `INSUFFICIENT_POINTS` | 400 | 포인트 부족 (만료 포인트만 보유 포함) |
 | `PRODUCT_NOT_FOUND` | 404 | 상품 없음 |
 | `PRODUCT_OUT_OF_STOCK` | 409 | 재고 소진 |
+| `PRODUCT_HAS_ORDERS` | 409 | 주문 내역이 있어 상품 삭제 불가 |
 | `ORDER_NOT_FOUND` | 404 | 주문 없음 |
 | `ORDER_ALREADY_CANCELLED` | 409 | 이미 취소된 주문 |
 | `ROULETTE_NOT_FOUND` | 404 | 룰렛 이력 없음 |
 | `ROULETTE_ALREADY_CANCELLED` | 409 | 이미 취소된 룰렛 |
-| `ROULETTE_POINTS_USED` | 409 | 포인트 사용 중이라 룰렛 취소 불가 |
 | `FORBIDDEN` | 403 | 권한 없음 (role 불일치) |
 | `UNAUTHORIZED` | 401 | 인증 필요 |
 | `USER_NOT_FOUND` | 404 | 유저 없음 |
@@ -565,6 +565,28 @@ Product ──1:N──> Order
 
 ---
 
+#### DELETE `/api/admin/products/{id}`
+
+상품 삭제. 물리적 삭제(hard delete)로 데이터베이스에서 완전히 제거.
+
+**사전 조건**: 해당 상품으로 생성된 주문이 없어야 함 (주문이 있으면 삭제 불가).
+
+**Response 200**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "상품이 삭제되었습니다"
+  }
+}
+```
+
+**에러**:
+- `PRODUCT_NOT_FOUND` (404) — 상품 없음
+- `PRODUCT_HAS_ORDERS` (409) — 주문 내역이 있어 삭제 불가
+
+---
+
 #### GET `/api/admin/orders`
 
 전체 주문 내역.
@@ -575,7 +597,15 @@ Product ──1:N──> Order
 
 #### POST `/api/admin/orders/{id}/cancel`
 
-주문 취소. 포인트 환불 (원래 포인트 레코드의 balance 복원).
+특정 사용자의 주문을 어드민이 취소하고 포인트를 환불합니다.
+
+**동작**:
+1. 주문 상태를 `CANCELLED`로 변경
+2. OrderPointUsage 조회 후 각 PointLedger의 balance 복원
+3. Product의 stock 복원
+4. 환불된 포인트 중 이미 만료된 것은 복원되어도 사용 불가
+
+**Request**: 없음 (URL 파라미터로 orderId만 전달)
 
 **Response 200**
 ```json
@@ -583,6 +613,8 @@ Product ──1:N──> Order
   "success": true,
   "data": {
     "orderId": 1,
+    "userId": 5,
+    "userName": "player1",
     "refundedAmount": 500,
     "message": "주문이 취소되고 포인트가 환불되었습니다"
   }
@@ -590,8 +622,6 @@ Product ──1:N──> Order
 ```
 
 **에러**: `ORDER_NOT_FOUND`, `ORDER_ALREADY_CANCELLED`
-
-> 환불된 포인트 중 이미 만료된 부분은 복원되어도 사용 불가.
 
 ---
 
@@ -605,9 +635,16 @@ Product ──1:N──> Order
 
 #### POST `/api/admin/roulette/{id}/cancel`
 
-룰렛 참여 취소. 포인트 회수.
+특정 사용자의 룰렛 참여를 어드민이 취소하고 포인트를 회수합니다.
 
-**사전 조건**: 해당 포인트로 주문이 존재하지 않아야 함.
+**동작**:
+1. RouletteHistory 상태를 `CANCELLED`로 변경
+2. 해당 룰렛으로 지급된 PointLedger의 balance를 조회
+3. **이미 사용된 포인트(balance < amount)는 회수하지 않음**
+4. 남은 포인트만 회수: balance를 0으로 설정
+5. 당일(KST) 취소인 경우, DailyBudget의 remaining 복구
+
+**사전 조건**: 없음 (부분 사용 중이어도 취소 가능, 남은 포인트만 회수)
 
 **Response 200**
 ```json
@@ -615,16 +652,21 @@ Product ──1:N──> Order
   "success": true,
   "data": {
     "historyId": 1,
-    "reclaimedAmount": 350,
+    "userId": 5,
+    "userName": "player1",
+    "originalAmount": 350,
+    "reclaimedAmount": 150,
+    "alreadyUsedAmount": 200,
     "budgetRestored": true,
-    "message": "룰렛이 취소되고 포인트가 회수되었습니다"
+    "message": "룰렛이 취소되었습니다. 사용하지 않은 150p를 회수했습니다."
   }
 }
 ```
 
-**에러**: `ROULETTE_NOT_FOUND`, `ROULETTE_ALREADY_CANCELLED`, `ROULETTE_POINTS_USED`
+**에러**: `ROULETTE_NOT_FOUND`, `ROULETTE_ALREADY_CANCELLED`
 
 > `budgetRestored`: 당일 취소면 true (예산 복구), 다른 날이면 false.
+> 이미 사용된 포인트는 회수하지 않으므로, 부분 사용 중이어도 취소 가능.
 
 ---
 
