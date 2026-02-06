@@ -1834,3 +1834,157 @@ Action 1부터 시작할까요?
 ---
 
 <!-- LAST_LOG_CURSOR: 2026-02-06T15:35:00+09:00 -->
+
+---
+
+## 세션: 2026-02-06 오후 (상품 기능 구현)
+
+### 사용자:
+다음 기능을 구현해
+
+### Claude:
+먼저 포인트 기능을 커밋하고, 다음 기능(상품 기능)을 구현하겠습니다.
+
+## 1. 포인트 기능 커밋
+
+[커밋 완료: feat: 포인트 기능 구현 (Step 12)]
+
+커밋 완료! 이제 상품 기능(Step 13)을 구현하겠습니다.
+
+## 2. 상품 기능 구현
+
+### 2.1 Product 엔티티 확인
+[Product.kt 확인 - 정상]
+
+### 2.2 ProductRepository 확인
+[ProductRepository.kt 확인 - findAllByIsActiveTrue 메서드 있음]
+
+### 2.3 DTO 생성
+[ProductResponse.kt 생성]
+- ProductListResponse
+- ProductItem
+- ProductDetailResponse
+
+### 2.4 ProductService 구현
+[ProductService.kt 생성]
+- getProducts() — 활성화된 상품만 반환 (재고 0 포함)
+- getProduct(productId) — 상품 상세 조회
+
+### 2.5 ProductController 구현
+[ProductController.kt 생성]
+- GET /api/user/products
+- GET /api/user/products/{id}
+
+## 3. 빌드 및 테스트
+
+[빌드 성공]
+[서버 재시작]
+
+## 4. 테스트 데이터 추가
+
+[5개 상품 추가: 커피 쿠폰, 영화 관람권, 치킨 쿠폰, 품절 상품(재고 0), 비활성 상품]
+
+## 5. API 테스트
+
+### 5.1 로그인
+[로그인 성공: producttest]
+
+### 5.2 상품 목록 조회
+```json
+{
+  "success": true,
+  "data": {
+    "products": [
+      {"id": 1, "name": "커피 쿠폰", "price": 4500, "stock": 10},
+      {"id": 2, "name": "영화 관람권", "price": 12000, "stock": 5},
+      {"id": 3, "name": "치킨 쿠폰", "price": 18000, "stock": 3},
+      {"id": 4, "name": "품절 상품", "price": 1000, "stock": 0}
+    ]
+  }
+}
+```
+
+완벽합니다! 활성화된 상품 4개가 조회되었고, 비활성 상품은 제외되었습니다. 재고 0인 상품도 목록에 포함되어 있습니다. ✅
+
+### 5.3 상품 상세 조회
+[상품 1 상세 조회 성공]
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "커피 쿠폰",
+    "description": "스타벅스 아메리카노",
+    "price": 4500,
+    "stock": 10,
+    "createdAt": "2026-02-06T06:38:57.825758",
+    "updatedAt": "2026-02-06T06:38:57.825758"
+  }
+}
+```
+
+✅ 상품 기능 구현 완료!
+
+구현된 파일:
+1. ProductResponse.kt (DTO)
+2. ProductService.kt
+3. ProductController.kt
+
+테스트 결과:
+- GET /api/user/products → 4개 상품 조회 (활성화, 재고 0 포함)
+- GET /api/user/products/1 → 상세 정보 조회 성공
+
+📊 전체 진행률: 4/19 API (21.1%)
+
+---
+
+### 사용자:
+재고가 0인 상품은 사용자에게는 보이지 않게 해.
+
+### Claude:
+재고 0인 상품을 목록에서 제외하도록 수정하겠습니다.
+
+[ProductRepository 수정: findAllByIsActiveTrueAndStockGreaterThan 메서드 추가]
+[ProductService 수정: 재고 있는 상품만 조회하도록 변경]
+[ProductController 주석 수정]
+
+수정 완료! 빌드하고 테스트하겠습니다.
+
+[빌드 성공]
+[서버 재시작]
+
+### 테스트 결과
+
+```json
+{
+  "products": [
+    {"id": 1, "name": "커피 쿠폰", "stock": 10},
+    {"id": 2, "name": "영화 관람권", "stock": 5},
+    {"id": 3, "name": "치킨 쿠폰", "stock": 3}
+  ]
+}
+```
+
+완벽합니다! ✅ 재고 0인 상품이 목록에서 제외되었습니다!
+
+**이전**: 4개 상품 (재고 0 포함)
+**변경 후**: 3개 상품 (재고 있는 것만)
+
+재고 0인 "품절 상품"이 제외되었습니다!
+
+[커밋 완료: feat: 상품 기능 구현 (Step 13)]
+
+✅ 상품 기능 커밋 완료!
+
+**완료된 기능:**
+- ✅ Step 11: 룰렛 기능
+- ✅ Step 12: 포인트 기능
+- ✅ Step 13: 상품 기능
+
+📈 전체 진행률: 6/19 API (31.6%)
+
+다음은 **주문 기능 (Step 14)** 구현입니다.
+
+---
+
+<!-- LAST_LOG_CURSOR: 2026-02-06T15:50:00+09:00 -->
