@@ -731,8 +731,8 @@ WHERE id = :id AND stock > 0
 
 | 레이어 | 스택 |
 |---|---|
-| Backend | Spring Boot 3.x, Kotlin, JPA (Hibernate), PostgreSQL |
-| API 문서 | SpringDoc OpenAPI 3 (Swagger UI) |
+| Backend | Spring Boot 3.5.0, Kotlin 2.0.21, Java 21, JPA (Hibernate), PostgreSQL 16 |
+| API 문서 | SpringDoc OpenAPI 3 (Swagger UI: `/swagger-ui/index.html`) |
 | Frontend | React 18+, Vite, TypeScript, Tailwind CSS, TanStack Query |
 | Admin | React 18+, Vite, TypeScript, Tailwind CSS, TanStack Query |
 | Mobile | Flutter (WebView) |
