@@ -9,6 +9,8 @@ interface ProductRepository : JpaRepository<Product, Long> {
 
     fun findAllByIsActiveTrue(): List<Product>
 
+    fun findAllByIsActiveTrueAndStockGreaterThan(stock: Int): List<Product>
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         UPDATE Product p
