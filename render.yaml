@@ -1,11 +1,11 @@
 services:
   - type: web
     name: roulette-vibe-backend
-    env: java
+    env: docker
     region: oregon
     plan: free
-    buildCommand: cd backend && ./gradlew build -x test
-    startCommand: cd backend && java -jar build/libs/*.jar
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     healthCheckPath: /actuator/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE

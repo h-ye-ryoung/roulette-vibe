@@ -34,6 +34,7 @@ class SecurityConfig(
                         "/api-docs/**",
                         "/v3/api-docs/**"
                     ).permitAll()
+                    .requestMatchers("/actuator/health").permitAll()
                     .anyRequest().authenticated()
             }
             .exceptionHandling { ex ->
