@@ -1,6 +1,6 @@
 # HANDOFF.md — 세션 인계 문서
 
-> **최종 갱신**: 2026-02-06T11:46:00+09:00
+> **최종 갱신**: 2026-02-06T16:00:00+09:00
 
 ---
 
@@ -9,20 +9,20 @@
 | # | 작업 | 상태 | 산출물 |
 |---|---|---|---|
 | 1 | 요구사항 분석 및 PDP 1~8 확정 | 완료 | `CLAUDE.md` §3 |
-| 2 | `docs/SPEC.md` 작성 (v1.0 확정) | 완료 | 7개 엔티티, 18개 API, 12개 에러코드, 7개 동시성 테스트 시나리오 |
-| 3 | `CLAUDE.md` 전면 업데이트 | 완료 | 기술 스택 SSOT 지정 (Spring Boot 3.5.0, Kotlin 2.0.21), 단계별 확인 규칙 추가 |
-| 4 | Gradle 프로젝트 초기화 | 완료 | `backend/build.gradle.kts`, Gradle Wrapper 8.12 |
-| 5 | Docker Compose 작성 | 완료 | `compose.yml` — PostgreSQL 16 컨테이너 |
-| 6 | 설정 파일 작성 | 완료 | `application.yml`, `application-local.yml`, `application-prod.yml` |
-| 7 | 환경변수 예제 작성 | 완료 | `backend/.env.example` |
-| 8 | 메인 애플리케이션 작성 | 완료 | `RouletteApplication.kt` |
-| 9 | Entity + JPA 매핑 (7개) | 완료 | User, DailyBudget, RouletteHistory, PointLedger, Product, Order, OrderPointUsage |
-| 10 | Repository 인터페이스 + 동시성 쿼리 | 완료 | `decrementRemaining`, `decrementStock`, `findAvailableByUserIdForUpdate` |
-| 11 | 세션 기반 Auth 구현 | 완료 | AuthController, AuthService, CustomUserDetailsService, SecurityConfig, SessionAuthenticationFilter |
-| 12 | 예외 처리 체계 구축 | 완료 | BusinessException 계층, GlobalExceptionHandler, ApiResponse 래퍼 |
-| 13 | **룰렛 기능 구현 (Step 11)** | ✅ 완료 | RouletteService, RouletteController, DTO, 중복 방지 로직 |
-| 14 | 빌드 및 로컬 테스트 | 완료 | `./gradlew build` 성공, 서버 기동 성공, 룰렛 API 테스트 완료 |
-| 15 | 대화 로그 기록 | 완료 | `docs/PROMPT.md` (커서: `2026-02-06T11:45:00+09:00`) |
+| 2 | API 명세 수정 (주문 취소 권한, 상품 DELETE, 룰렛 취소 정책) | 완료 | `SPEC.md` v1.1 (19개 API), `CLAUDE.md` 업데이트 |
+| 3 | Gradle 프로젝트 초기화 | 완료 | `backend/build.gradle.kts`, Gradle Wrapper 8.12 |
+| 4 | Docker Compose 작성 | 완료 | `compose.yml` — PostgreSQL 16 컨테이너 |
+| 5 | 설정 파일 작성 | 완료 | `application.yml`, `application-local.yml`, `application-prod.yml` |
+| 6 | 환경변수 예제 작성 | 완료 | `backend/.env.example` |
+| 7 | 메인 애플리케이션 작성 | 완료 | `RouletteApplication.kt` |
+| 8 | Entity + JPA 매핑 (7개) | 완료 | User, DailyBudget, RouletteHistory, PointLedger, Product, Order, OrderPointUsage |
+| 9 | Repository 인터페이스 + 동시성 쿼리 | 완료 | `decrementRemaining`, `decrementStock`, `findAvailableByUserIdForUpdate` |
+| 10 | 세션 기반 Auth 구현 | 완료 | AuthController, AuthService, CustomUserDetailsService, SecurityConfig, SessionAuthenticationFilter |
+| 11 | 예외 처리 체계 구축 | 완료 | BusinessException 계층, GlobalExceptionHandler, ApiResponse 래퍼 |
+| 12 | **룰렛 기능 구현 (Step 11)** | ✅ 완료 | RouletteService, RouletteController, DTO, 중복 방지 로직 |
+| 13 | **포인트 기능 구현 (Step 12)** | ✅ 완료 | PointService, PointController, DTO, 잔액/내역 조회, PointLedger에 type/issuedAt 추가 |
+| 14 | **상품 기능 구현 (Step 13)** | ✅ 완료 | ProductService, ProductController, DTO, 재고 필터링 (stock > 0) |
+| 15 | 대화 로그 기록 | 완료 | `docs/PROMPT.md` (커서: `2026-02-06T15:50:00+09:00`) |
 
 ---
 
@@ -33,9 +33,9 @@
 | 우선순위 | 작업 | 상태 |
 |---|---|---|
 | ~~P0~~ | ~~Step 11: 룰렛 기능 구현~~ | ✅ 완료 |
-| **P0** | Step 12: 포인트 기능 구현 | 대기 중 (다음 작업) |
-| **P0** | Step 13: 상품 기능 구현 | 대기 중 |
-| **P0** | Step 14: 주문 기능 구현 (사용자: 생성/조회만, 취소 불가) | 대기 중 |
+| ~~P0~~ | ~~Step 12: 포인트 기능 구현~~ | ✅ 완료 |
+| ~~P0~~ | ~~Step 13: 상품 기능 구현~~ | ✅ 완료 |
+| **P0** | Step 14: 주문 기능 구현 (사용자: 생성/조회만, 취소 불가) | 대기 중 (다음 작업) |
 | **P0** | Step 15: 어드민 API 구현 (대시보드, 예산, 상품CRUD+DELETE, 주문/룰렛 취소) | 대기 중 |
 | **P0** | Step 16: 동시성 테스트 (T-1~T-7) | 대기 중 |
 | P1 | Phase 2: 백엔드 배포 | Render/Railway + Neon + GitHub Actions CI/CD |
@@ -139,19 +139,65 @@ backend/src/main/kotlin/com/roulette/domain/roulette/
 
 ---
 
-## 5. 미해결 이슈 / 보류 사항
+## 5. Step 12, 13 구현 상세
 
-**없음.** 룰렛 기능 완전히 구현 및 테스트 완료.
+### Step 12: 포인트 기능 (완료)
+
+**구현 파일:**
+```
+backend/src/main/kotlin/com/roulette/domain/point/
+├── PointLedger.kt (수정: type, issuedAt 필드 추가)
+├── PointLedgerRepository.kt (확장: 만료 예정/내역 쿼리 추가)
+├── PointService.kt
+├── PointController.kt
+└── dto/
+    ├── BalanceResponse.kt
+    └── PointHistoryResponse.kt
+```
+
+**API:**
+- GET /api/user/points/balance → 유효 포인트 합산 + 7일 이내 만료 예정
+- GET /api/user/points/history → 전체 내역 (페이지네이션)
+
+**테스트 결과:**
+- ✅ 잔액 조회: 330p (유효 포인트만)
+- ✅ 내역 조회: 1건 (type: EARN, expired: false)
+
+### Step 13: 상품 기능 (완료)
+
+**구현 파일:**
+```
+backend/src/main/kotlin/com/roulette/domain/product/
+├── ProductRepository.kt (확장: findAllByIsActiveTrueAndStockGreaterThan)
+├── ProductService.kt
+├── ProductController.kt
+└── dto/
+    └── ProductResponse.kt
+```
+
+**API:**
+- GET /api/user/products → 활성화 + 재고 있는 상품만 (stock > 0)
+- GET /api/user/products/{id} → 상품 상세 조회
+
+**테스트 결과:**
+- ✅ 목록 조회: 3개 상품 (재고 0 제외, 비활성 제외)
+- ✅ 상세 조회: 정상 동작
 
 ---
 
-## 6. 현재 막힌 지점
+## 6. 미해결 이슈 / 보류 사항
 
-**막힌 지점 없음.** 다음 단계(포인트 기능) 진행 가능.
+**없음.** 포인트, 상품 기능 모두 정상 동작.
 
 ---
 
-## 7. 다음 세션 첫 3개 액션
+## 7. 현재 막힌 지점
+
+**막힌 지점 없음.** 다음 단계(주문 기능) 진행 가능.
+
+---
+
+## 8. 다음 세션 첫 액션: 주문 기능 구현
 
 ### Action 1: 포인트 기능 구현 (PointService, PointController)
 
@@ -268,13 +314,21 @@ backend/src/main/kotlin/com/roulette/domain/roulette/
 
 ## 10. 진행률
 
-**Phase 1 백엔드 코어: 16.7% 완료 (1/6 단계)**
+**Phase 1 백엔드 코어: 50% 완료 (3/6 단계)**
 
 - ✅ Step 11: 룰렛 기능
-- ⬜ Step 12: 포인트 기능
-- ⬜ Step 13: 상품 기능
-- ⬜ Step 14: 주문 기능
+- ✅ Step 12: 포인트 기능
+- ✅ Step 13: 상품 기능
+- ⬜ Step 14: 주문 기능 (다음 작업)
 - ⬜ Step 15: 어드민 API
 - ⬜ Step 16: 동시성 테스트
 
-**전체 프로젝트: ~7% 완료**
+**API 구현 진행률: 6/19 API 완료 (31.6%)**
+- 인증: 1/1 (로그인)
+- 룰렛: 2/2 (참여, 상태 조회)
+- 포인트: 2/2 (잔액, 내역)
+- 상품: 2/3 (목록, 상세)
+- 주문: 0/3
+- 어드민: 0/8
+
+**전체 프로젝트: ~12% 완료**
