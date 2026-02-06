@@ -4,14 +4,19 @@ import com.roulette.common.BaseTimeEntity
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
+enum class PointType {
+    EARN,    // 룰렛으로 획득
+    REFUND   // 주문 취소로 환불
+}
+
 @Entity
 @Table(name = "point_ledger")
 class PointLedger(
     @Column(name = "user_id", nullable = false)
     val userId: Long,
 
-    @Column(name = "roulette_history_id", nullable = false)
-    val rouletteHistoryId: Long,
+    @Column(name = "roulette_history_id")
+    val rouletteHistoryId: Long? = null,
 
     @Column(nullable = false)
     val amount: Int,
@@ -19,12 +24,19 @@ class PointLedger(
     @Column(nullable = false)
     var balance: Int,
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    val type: PointType = PointType.EARN,
+
+    @Column(name = "issued_at", nullable = false)
+    val issuedAt: LocalDateTime = LocalDateTime.now(),
+
     @Column(name = "expires_at", nullable = false)
     val expiresAt: LocalDateTime
 ) : BaseTimeEntity() {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0
+    val id: Long? = null
 
     fun isExpired(): Boolean = LocalDateTime.now().isAfter(expiresAt)
 

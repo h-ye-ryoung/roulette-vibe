@@ -75,13 +75,16 @@ class RouletteService(
         }
 
         // 6. 포인트 지급 (유효기간 = 지급일 + 30일)
-        val expiresAt = LocalDateTime.now().plusDays(30)
+        val now = LocalDateTime.now()
+        val expiresAt = now.plusDays(30)
         pointLedgerRepository.save(
             PointLedger(
                 userId = userId,
                 rouletteHistoryId = history.id,
                 amount = amount,
                 balance = amount,
+                type = com.roulette.domain.point.PointType.EARN,
+                issuedAt = now,
                 expiresAt = expiresAt
             )
         )
