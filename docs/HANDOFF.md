@@ -1,404 +1,296 @@
-# HANDOFF.md — 세션 인계 문서
+# 작업 인계 문서
 
-> **최종 갱신**: 2026-02-07T00:16:00+09:00
-
----
-
-## 1. 완료된 작업
-
-| # | 작업 | 상태 | 산출물 |
-|---|---|---|---|
-| 1 | 요구사항 분석 및 PDP 1~8 확정 | 완료 | `CLAUDE.md` §3 |
-| 2 | API 명세 확정 | 완료 | `SPEC.md` v1.1 (22개 API) |
-| 3 | Gradle 프로젝트 초기화 | 완료 | `backend/build.gradle.kts`, Gradle Wrapper 8.12 |
-| 4 | Docker Compose 작성 | 완료 | `compose.yml` — PostgreSQL 16 컨테이너 |
-| 5 | 설정 파일 작성 | 완료 | `application.yml`, `application-local.yml`, `application-prod.yml` |
-| 6 | 환경변수 예제 작성 | 완료 | `backend/.env.example` |
-| 7 | 메인 애플리케이션 작성 | 완료 | `RouletteApplication.kt` |
-| 8 | Entity + JPA 매핑 (7개) | 완료 | User, DailyBudget, RouletteHistory, PointLedger, Product, Order, OrderPointUsage |
-| 9 | Repository 인터페이스 + 동시성 쿼리 | 완료 | `decrementRemaining`, `decrementStock`, `findAvailableByUserIdForUpdate` |
-| 10 | 세션 기반 Auth 구현 | 완료 | AuthController, AuthService, CustomUserDetailsService, SecurityConfig |
-| 11 | 예외 처리 체계 구축 | 완료 | BusinessException 계층, GlobalExceptionHandler, ApiResponse 래퍼 |
-| 12 | 룰렛 기능 (Step 11) | ✅ 완료 | RouletteService, RouletteController, 중복 방지 로직 |
-| 13 | 포인트 기능 (Step 12) | ✅ 완료 | PointService, PointController, 잔액/내역 조회, 만료 예정 구분 |
-| 14 | 상품 기능 (Step 13) | ✅ 완료 | ProductService, ProductController, 재고 필터링 |
-| 15 | 주문 기능 (Step 14) | ✅ 완료 | OrderService, OrderController, FIFO 포인트 차감 |
-| 16 | 어드민 API (Step 15) | ✅ 완료 | AdminService, AdminController, 대시보드/예산/상품/주문/룰렛 관리 (12개 API) |
-| 17 | 동시성 테스트 (Step 16) | ✅ 완료 | ConcurrencyTest.kt (T-1~T-7 모두 통과) |
-| 18 | **배포 설정 (Step 17)** | ✅ 완료 | Dockerfile, render.yaml, GitHub Actions, actuator 설정 |
-| 19 | 대화 로그 기록 | 완료 | `docs/PROMPT.md` (커서: `2026-02-07T00:15:00+09:00`) |
+**날짜**: 2026-02-07
+**세션**: 6차 세션
+**마지막 작업**: 어드민 웹 - 예산 관리 페이지 구현 완료
 
 ---
 
-## 2. 남은 작업 (우선순위순)
+## 완료된 작업
 
-### Phase 2: 백엔드 배포 ⏳ 진행 중
+### 백엔드
+- [x] Spring Boot + Kotlin 기반 API 서버 구현
+- [x] PostgreSQL 16 + JPA 구현
+- [x] 세션 기반 인증 (role: USER/ADMIN 분리)
+- [x] CORS 설정 (allowedOriginPatterns 사용)
+- [x] 세션 쿠키 설정 (Secure=false, SameSite=none - 로컬 개발용)
+- [x] Render 배포 (https://roulette-backend-upmn.onrender.com)
+- [x] GitHub Actions CI/CD 구축
+- [x] 어드민 API 전체 구현
+  - [x] 대시보드 API (`GET /api/admin/dashboard`)
+  - [x] 예산 API (`GET/PUT /api/admin/budget`)
+  - [x] 룰렛 내역 API (`GET /api/admin/roulette/history`)
+  - [x] 룰렛 취소 API (`POST /api/admin/roulette/{id}/cancel`)
 
-| 우선순위 | 작업 | 상태 |
-|---|---|---|
-| **P0** | Neon PostgreSQL 프로비저닝 | ⏳ **다음 작업** |
-| **P0** | Render Web Service 생성 | 대기 중 |
-| **P0** | Render 환경변수 설정 | 대기 중 |
-| **P0** | GitHub Secrets 설정 | 대기 중 |
-| **P0** | 배포 후 API 테스트 | 대기 중 |
+### 어드민 웹 프론트엔드
+- [x] Vite + React 18 + TypeScript 환경 구축
+- [x] TanStack Query + React Router 설정
+- [x] shadcn/ui + Tailwind CSS 설정
+- [x] 로그인 페이지 구현 (`/login`)
+- [x] 대시보드 페이지 구현 (`/`)
+  - 4개 통계 카드 (일일 예산, 남은 예산, 사용 예산, 참여자 수)
+  - 예산 소진율 Progress Bar
+  - 로딩/에러 상태 처리
+- [x] 예산 관리 페이지 구현 (`/budget`)
+  - 현재 예산 표시 (날짜, 한도, 남은 예산, 사용 예산)
+  - 예산 변경 폼 (React Hook Form + Zod 검증)
+  - 룰렛 참여 내역 테이블 (페이지네이션, 날짜 필터)
+  - 룰렛 취소 기능 (확인 Dialog)
+- [x] UI 컴포넌트 구현
+  - Card, Button, Input, Label
+  - Skeleton (로딩 상태)
+  - Progress (진행률 바)
+  - Badge (상태 표시)
+  - Table (데이터 테이블)
+  - Dialog (확인 모달)
 
-### Phase 3~6: 프론트엔드/모바일
-
-| 우선순위 | 작업 | 상태 |
-|---|---|---|
-| P2 | 프론트엔드(사용자) 구현 | React + TypeScript + Vite + TanStack Query |
-| P2 | 어드민 웹 구현 | 사용자 웹과 별도 앱 |
-| P3 | 프론트엔드/어드민 배포 | Vercel |
-| P4 | 모바일(Flutter WebView) | 사용자 웹 래핑 |
-
----
-
-## 3. 백엔드 API 완성 현황
-
-**✅ 전체 API: 22/22 완료 (100%)**
-
-### 인증 API (1개)
-- ✅ POST /api/auth/login
-
-### 사용자 API (9개)
-- ✅ POST /api/user/roulette/spin
-- ✅ GET /api/user/roulette/status
-- ✅ GET /api/user/points (포인트 목록 - expired/expiringSoon 구분)
-- ✅ GET /api/user/points/balance
-- ✅ GET /api/user/points/expiring
-- ✅ GET /api/user/points/history (별칭)
-- ✅ GET /api/user/products
-- ✅ POST /api/user/orders
-- ✅ GET /api/user/orders
-
-### 어드민 API (12개)
-- ✅ GET /api/admin/dashboard
-- ✅ GET /api/admin/budget
-- ✅ PUT /api/admin/budget
-- ✅ GET /api/admin/products (모든 상품 - ACTIVE/INACTIVE 포함)
-- ✅ POST /api/admin/products
-- ✅ PUT /api/admin/products/{id}
-- ✅ DELETE /api/admin/products/{id}
-- ✅ GET /api/admin/orders
-- ✅ POST /api/admin/orders/{id}/cancel
-- ✅ GET /api/admin/roulette/history
-- ✅ POST /api/admin/roulette/{id}/cancel
+### 문서화
+- [x] CLAUDE.md 업데이트 (어드민 웹 섹션 추가)
+- [x] ADMIN_SPEC.md 작성 (배포/타입/UI 전략)
+- [x] PROMPT.md 업데이트 (세션 6 기록)
 
 ---
 
-## 4. 배포 설정 완료 현황
+## 진행 중인 작업
 
-### ✅ 완료된 배포 파일
+**없음** - 예산 관리 페이지가 완전히 완료됨
 
-| 파일 | 내용 |
-|---|---|
-| `.github/workflows/backend-deploy.yml` | GitHub Actions CI/CD (Build → Test → Deploy) |
-| `backend/Dockerfile` | Multi-stage build (Gradle 8.12 + JDK 21) |
-| `backend/.dockerignore` | Docker 빌드 최적화 |
-| `render.yaml` | Render 배포 설정 (Docker 기반) |
-| `backend/build.gradle.kts` | Actuator 의존성 추가 |
-| `backend/src/main/resources/application-prod.yml` | Health check 엔드포인트 활성화 |
-| `backend/src/main/kotlin/com/roulette/config/SecurityConfig.kt` | `/actuator/health` permitAll |
+---
 
-### 📋 배포 체크리스트 (사용자 작업)
+## 다음에 해야 할 작업
 
-- [ ] **Step 1**: GitHub 코드 푸시
-  ```bash
-  git add .
-  git commit -m "feat: Render 배포 설정 추가 (Docker)"
-  git push origin main
+### 우선순위 1: 상품 관리 페이지 (`/products`)
+**예상 소요 시간**: 2-3시간
+
+**요구사항** (docs/ADMIN_SPEC.md 섹션 3.5 참조):
+1. **상품 목록 테이블**
+   - API: `GET /api/admin/products`
+   - 컬럼: ID, 상품명, 설명, 가격, 재고, 상태, 액션
+   - 상태 Badge: ACTIVE (초록), INACTIVE (회색)
+   - 재고 0: 빨간색 배지
+
+2. **상품 추가/수정 Dialog**
+   - 상품명 (1~100자)
+   - 설명 (1~500자, textarea)
+   - 가격 (1p 이상)
+   - 재고 (0 이상)
+   - 상태 (ACTIVE/INACTIVE, Select)
+   - React Hook Form + Zod 검증
+
+3. **상품 삭제**
+   - 확인 Dialog
+   - API: `DELETE /api/admin/products/{id}`
+   - 주문 내역 있으면 삭제 불가 (에러 처리)
+
+**필요한 UI 컴포넌트**:
+- Select (드롭다운) - 아직 없음, 생성 필요
+- Textarea - Input 컴포넌트 확장 또는 별도 생성
+
+**구현 순서**:
+1. Select 컴포넌트 생성 (`src/components/ui/select.tsx`)
+2. Textarea 컴포넌트 생성 (`src/components/ui/textarea.tsx`)
+3. 상품 API 함수 작성 (`src/api/products.ts`)
+4. ProductsPage 컴포넌트 작성 (`src/pages/ProductsPage.tsx`)
+5. App.tsx 라우팅 연결
+6. 빌드 & 테스트
+
+---
+
+### 우선순위 2: 주문 관리 페이지 (`/orders`)
+**예상 소요 시간**: 1-2시간
+
+**요구사항** (docs/ADMIN_SPEC.md 섹션 3.6 참조):
+1. **주문 목록 테이블**
+   - API: `GET /api/admin/orders?page={page}&size={size}&status={status}`
+   - 컬럼: ID, 사용자명, 상품명, 수량, 총 금액, 날짜, 상태, 액션
+   - 상태 필터 (Select): 전체, COMPLETED, CANCELLED
+   - 페이지네이션
+
+2. **주문 취소**
+   - 확인 Dialog
+   - API: `POST /api/admin/orders/{id}/cancel`
+   - 성공 시 포인트 환불 + 재고 복구
+
+**구현 순서**:
+1. 주문 API 함수 작성 (`src/api/orders.ts`)
+2. OrdersPage 컴포넌트 작성 (`src/pages/OrdersPage.tsx`)
+3. App.tsx 라우팅 연결
+4. 빌드 & 테스트
+
+---
+
+### 우선순위 3: 어드민 웹 배포 (Vercel)
+**예상 소요 시간**: 30분
+
+**작업**:
+1. Vercel 프로젝트 생성
+2. 환경변수 설정
+   - `VITE_API_BASE_URL=https://roulette-backend-upmn.onrender.com`
+3. 빌드 설정
+   - Framework Preset: Vite
+   - Root Directory: `admin`
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+4. 배포 후 검증
+5. 백엔드 쿠키 설정 원복 (`Secure=true`)
+
+---
+
+### 우선순위 4: 사용자 웹 프론트엔드 (frontend/)
+**예상 소요 시간**: 4-6시간
+
+**구현할 페이지**:
+1. 로그인 페이지
+2. 룰렛 참여 페이지
+3. 포인트 내역 페이지
+4. 상품 목록 페이지
+5. 상품 상세/주문 페이지
+6. 주문 내역 페이지
+
+---
+
+### 우선순위 5: Flutter 모바일 앱
+**예상 소요 시간**: 2-3시간
+
+**구현**:
+- WebView로 사용자 웹 렌더링
+- 앱 기본 설정
+- Android/iOS 빌드
+
+---
+
+## 주의사항
+
+### 백엔드
+- ⚠️ **세션 쿠키 설정 임시 조치**
+  - 현재: `Secure=false`, `SameSite=none` (로컬 개발용)
+  - TODO: 어드민 Vercel 배포 후 `Secure=true`로 원복
+  - 위치: `backend/src/main/resources/application-prod.yml`
+
+- ⚠️ **CORS 설정**
+  - `allowedOriginPatterns` 사용 (와일드카드 지원)
+  - 로컬: `http://localhost:*`
+  - 배포: `https://*.vercel.app`
+  - 위치: `backend/src/main/kotlin/com/roulette/config/SecurityConfig.kt`
+
+### 프론트엔드
+- ⚠️ **Optional chaining 필수**
+  - API 응답 데이터는 항상 `?.` 사용
+  - 예: `history?.items && history.items.length > 0`
+  - 이유: 로딩 중이거나 에러 시 `undefined` 가능
+
+- ⚠️ **Button 컴포넌트 variant**
+  - 지원: `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`
+  - 지원: `size="sm"`, `size="lg"`, `size="icon"`
+
+- ⚠️ **TanStack Query 패턴**
+  - `queryKey`는 배열로, 필터/페이지 파라미터 포함
+  - `invalidateQueries`로 관련 쿼리 재조회
+  - 예: `queryClient.invalidateQueries({ queryKey: ['budget'] })`
+
+### 환경변수
+- 로컬: `.env.local` (gitignore 처리됨)
+- 배포: Vercel/Render 환경변수 설정
+- 현재 어드민 `.env.local`:
+  ```
+  VITE_API_BASE_URL=https://roulette-backend-upmn.onrender.com
   ```
 
-- [ ] **Step 2**: Neon PostgreSQL 설정 ⭐ **다음 작업**
-  - [Neon](https://neon.tech) 계정 생성/로그인
-  - "New Project" → roulette-vibe, US West (Oregon), PostgreSQL 16, Free
-  - Connection String 복사: `postgresql://user:pass@host/db`
+---
 
-- [ ] **Step 3**: Render Web Service 생성
-  - [Render](https://render.com) 계정 생성/로그인
-  - "New +" → "Web Service" → GitHub 연결 (roulette-vibe)
-  - render.yaml 자동 감지 확인
+## 알려진 버그
 
-- [ ] **Step 4**: Render 환경변수 설정 (7개)
-  - `SPRING_PROFILES_ACTIVE=prod`
-  - `DATABASE_URL=jdbc:postgresql://[Neon Host]/neondb?sslmode=require`
-  - `DATABASE_USERNAME=[Neon Username]`
-  - `DATABASE_PASSWORD=[Neon Password]`
-  - `ADMIN_NICKNAMES=admin`
-  - `DAILY_BUDGET_DEFAULT=100000`
-  - `SERVER_PORT=8080`
-
-- [ ] **Step 5**: Render 배포 시작
-  - "Create Web Service" 클릭
-  - 빌드 로그 확인 (5~10분)
-
-- [ ] **Step 6**: GitHub Secrets 설정
-  - Render Deploy Hook 복사
-  - GitHub → Settings → Secrets → `RENDER_DEPLOY_HOOK` 추가
-
-- [ ] **Step 7**: 배포 확인
-  - Health check: `https://[서비스명].onrender.com/actuator/health`
-  - Swagger UI: `https://[서비스명].onrender.com/swagger-ui/index.html`
+**없음** - 현재 구현된 기능은 모두 정상 작동
 
 ---
 
-## 5. 동시성 테스트 결과
+## 관련 파일
 
-**전체 7개 테스트 모두 통과 ✅**
+### 백엔드
+- `backend/src/main/kotlin/com/roulette/config/SecurityConfig.kt` - CORS/인증 설정
+- `backend/src/main/resources/application-prod.yml` - 프로덕션 설정 (세션 쿠키)
+- `backend/src/main/kotlin/com/roulette/controller/AdminController.kt` - 어드민 API
 
-| 테스트 | 시나리오 | 결과 |
-|---|---|---|
-| T-1 | 동일 유저 10개 스레드 동시 참여 | 1건만 성공, 9건 실패 ✓ |
-| T-2 | 100명 동시 참여 (예산 100,000p) | 총 지급액 ≤ 100,000p ✓ |
-| T-3 | 예산 500p 남은 상태 10명 동시 참여 | 최대 5명만 성공 ✓ |
-| T-4 | 재고 1개 상품 3명 동시 주문 | 1건만 성공 ✓ |
-| T-5 | 만료 포인트로 주문 시도 | INSUFFICIENT_POINTS 예외 ✓ |
-| T-6 | 주문 취소 시 포인트 복원 | balance 정확히 복원 ✓ |
-| T-7 | 룰렛 취소 시 부분 회수 | 남은 포인트만 회수 ✓ |
+### 어드민 웹
+- `admin/src/App.tsx` - 라우팅 설정
+- `admin/src/api/client.ts` - Axios 클라이언트 (withCredentials)
+- `admin/src/api/dashboard.ts` - 대시보드 API
+- `admin/src/api/budget.ts` - 예산 API
+- `admin/src/api/roulette.ts` - 룰렛 API
+- `admin/src/pages/DashboardPage.tsx` - 대시보드 페이지
+- `admin/src/pages/BudgetPage.tsx` - 예산 관리 페이지 (룰렛 내역 포함)
+- `admin/src/components/layout/Sidebar.tsx` - 네비게이션 메뉴
+- `admin/src/components/ui/*` - shadcn/ui 컴포넌트들
 
-**테스트 파일:**
-- `backend/src/test/kotlin/com/roulette/ConcurrencyTest.kt`
-- `backend/src/test/resources/application-test.yml` (H2 인메모리 DB)
-
----
-
-## 6. 핵심 정책 (PDP) 구현 상태
-
-| # | 정책 | 구현 | 검증 |
-|---|---|---|---|
-| PDP-1 | Lazy 예산 리셋 | ✅ | getOrCreateTodayBudget() |
-| PDP-2 | 동적 만료 필터 | ✅ | expires_at > NOW() 쿼리 |
-| PDP-3 | FIFO 포인트 차감 | ✅ | ORDER BY expires_at ASC + SELECT FOR UPDATE |
-| PDP-4 | 원래 포인트 복원 | ✅ | OrderPointUsage 기반 balance 복원 |
-| PDP-5 | 당일만 예산 복구 | ✅ | KST 날짜 비교 후 조건부 복구 |
-| PDP-6 | 예산 조건부 차감 | ✅ | WHERE remaining >= :amount |
-| PDP-7 | 닉네임 = 유저 ID | ✅ | 자동 생성/로그인 |
-| PDP-8 | 역할 완전 분리 | ✅ | SecurityConfig 필터 체인 |
+### 문서
+- `docs/SPEC.md` - 전체 프로젝트 명세
+- `docs/ADMIN_SPEC.md` - 어드민 웹 상세 명세
+- `docs/PROMPT.md` - AI 대화 로그 (원문)
+- `CLAUDE.md` - 프로젝트 가이드 & 규칙
+- `docs/HANDOFF.md` - 이 파일
 
 ---
 
-## 7. 동시성 메커니즘 구현
+## 마지막 상태
 
-### 데이터베이스 레벨
-- **UNIQUE 제약**: `(user_id, spin_date)` 중복 방지
-- **조건부 UPDATE**: `WHERE remaining >= :amount` 원자적 차감
-- **SELECT FOR UPDATE**: 포인트 차감 시 행 잠금
+### Git
+- **브랜치**: `main`
+- **마지막 커밋**:
+  - `bebadb8` - "fix: 세션 쿠키 설정 수정 (로컬 개발용)"
+  - `7207504` - "fix: CORS 설정 개선 - allowedOriginPatterns 사용"
+- **푸시 상태**: origin/main과 동기화됨
+- **Unstaged 변경사항**:
+  - `.claude/settings.local.json`
+  - `admin/package-lock.json`, `admin/package.json`
+  - `admin/src/` (여러 새 파일들 - 아직 커밋 안 됨)
+  - `docs/PROMPT.md` (세션 6 업데이트)
+  - `docs/HANDOFF.md` (이 파일)
 
-### 애플리케이션 레벨
-- **단일 트랜잭션**: 각 비즈니스 로직이 하나의 트랜잭션으로 완료
-- **명시적 중복 체크**: `existsByUserIdAndSpinDate` + UNIQUE 제약
-- **flush()**: `entityManager.flush()`로 UNIQUE 제약 즉시 확인
+### 빌드 상태
+- **백엔드**: ✅ 빌드 성공 (Gradle)
+- **어드민**: ✅ 빌드 성공 (Vite)
+  - 번들 크기: 468KB (gzip: 149KB)
 
----
+### 배포 상태
+- **백엔드**: ✅ Render에 배포됨
+  - URL: https://roulette-backend-upmn.onrender.com
+  - Health: `/actuator/health` 정상
+- **어드민**: ❌ 아직 배포 안 됨 (로컬만)
+  - 로컬: http://localhost:5174
 
-## 8. 미해결 이슈 / 보류 사항
-
-**보류: Codex MCP 코드 리뷰**
-- 상태: Codex CLI MCP 응답 없음 (Node.js 경고만 출력)
-- 시도: 3회 재시도 (모두 실패)
-- 리뷰 대상: 룰렛 동시성 검증 (existsByUserIdAndSpinDate + UNIQUE 제약 race condition)
-- 다음 조치: MCP 재연결 후 재시도 또는 수동 리뷰
-
-**기타 이슈:**
-- 없음
-
----
-
-## 9. 현재 막힌 지점
-
-**막힌 지점 없음.**
-
-배포 설정이 완료되어 사용자가 Neon/Render 설정만 진행하면 배포 가능.
+### 테스트 상태
+- **백엔드**: ⚠️ 테스트 없음 (`-x test`로 빌드)
+- **어드민**: ⚠️ 테스트 없음
 
 ---
 
-## 10. 다음 세션 첫 액션
+## 다음 세션 시작 방법
 
-### Option 1: 백엔드 배포 완료 (권장) ⭐
-**현재 단계**: Step 2 (Neon PostgreSQL 프로비저닝)
-
-1. **Neon PostgreSQL 설정**
-   - [Neon](https://neon.tech) 접속 → 프로젝트 생성
-   - Connection String 복사
-
-2. **Render 설정**
-   - [Render](https://render.com) 접속 → Web Service 생성
-   - GitHub 연결 → 환경변수 설정 (7개)
-   - 배포 시작
-
-3. **GitHub Secrets 설정**
-   - `RENDER_DEPLOY_HOOK` 추가
-
-4. **배포 확인**
-   - Health check: `/actuator/health`
-   - Swagger UI: `/swagger-ui/index.html`
-
-### Option 2: 프론트엔드 구현
-- React + TypeScript + Vite 프로젝트 초기화
-- 사용자 웹 화면 구현 (룰렛, 포인트, 상품, 주문)
-
-### Option 3: Codex MCP 코드 리뷰 재시도
-- MCP 재연결 후 동시성 검증 리뷰
-
----
-
-## 11. 기술 스택 (SSOT)
-
-| 항목 | 버전/기술 | 비고 |
-|---|---|---|
-| Spring Boot | **3.5.0** | SSOT 항목, 임의 변경 금지 |
-| Kotlin | **2.0.21** | SSOT 항목 |
-| Java | **21 LTS** | SSOT 항목 |
-| Gradle | **8.12** (Kotlin DSL) | Wrapper로 관리 |
-| PostgreSQL | **16** | 로컬: Docker, 배포: Neon |
-| H2 | **인메모리** | 테스트 전용 |
-| Swagger UI | `/swagger-ui/index.html` | SpringDoc OpenAPI 3 |
-| 인증 방식 | **HTTP 세션 기반** | JWT 아님 |
-
-### 배포 스택 (Production)
-
-| 항목 | 버전/설정 | 비고 |
-|---|---|---|
-| GitHub Actions | Ubuntu Latest + JDK 21 | CI/CD 자동화 |
-| Render | Free Tier, Oregon | Docker 기반 배포, HTTPS 자동 |
-| Neon PostgreSQL | Free Tier, PostgreSQL 16, Oregon | 관리형 DB |
-| Docker | Multi-stage build (Gradle 8.12 + Temurin 21-JRE) | 빌드 캐시 최적화 |
-
----
-
-## 12. 주요 파일 구조
-
+### Option 1: HANDOFF.md로 시작 (권장)
 ```
-backend/
-├── .github/workflows/
-│   └── backend-deploy.yml          # GitHub Actions CI/CD
-├── src/main/kotlin/com/roulette/
-│   ├── RouletteApplication.kt
-│   ├── config/
-│   │   ├── SecurityConfig.kt       # /actuator/health permitAll 추가
-│   │   └── AppProperties.kt
-│   ├── auth/
-│   │   ├── AuthController.kt
-│   │   └── AuthService.kt
-│   ├── common/
-│   │   ├── ApiResponse.kt
-│   │   ├── BusinessException.kt
-│   │   └── GlobalExceptionHandler.kt
-│   ├── domain/
-│   │   ├── user/
-│   │   ├── budget/
-│   │   ├── roulette/
-│   │   ├── point/
-│   │   ├── product/
-│   │   ├── order/
-│   │   └── admin/
-│   └── ...
-├── src/test/kotlin/com/roulette/
-│   └── ConcurrencyTest.kt          # 7개 시나리오
-├── Dockerfile                      # Multi-stage build
-├── .dockerignore
-└── build.gradle.kts                # actuator 추가
+HANDOFF.md 읽고 이어서 작업해줘. 상품 관리 페이지부터 시작하자.
+```
 
-render.yaml                         # Render 배포 설정
+### Option 2: 특정 작업 지정
+```
+HANDOFF.md 확인하고, 어드민 웹 Vercel 배포부터 시작해줘.
+```
+
+### Option 3: 새로운 작업
+```
+HANDOFF.md 읽고, 사용자 웹 프론트엔드 구현 시작하자.
 ```
 
 ---
 
-## 13. 워크플로우 규칙
+## 컨텍스트 정보
 
-- **단계별 확인 필수**: 각 단계 완료 후 요약 제시 → 사용자 확인 → 다음 단계
-- **SSOT 원칙**: `CLAUDE.md` > `docs/SPEC.md` 우선순위
-- **대화 로그**: `docs/PROMPT.md`에 원문 append, LAST_LOG_CURSOR로 중복 방지
-
----
-
-## 14. 참조 문서
-
-| 문서 | 경로 | 용도 |
-|---|---|---|
-| 프로젝트 규칙 | `CLAUDE.md` | 전체 정책/규칙/컨벤션 (SSOT) |
-| 확정 명세서 | `docs/SPEC.md` | 엔티티/API/화면/테스트 상세 |
-| 대화 로그 | `docs/PROMPT.md` | 원문 프롬프트/응답 기록 |
-| 인계 문서 | `docs/HANDOFF.md` | 세션 간 작업 인계 |
+- **현재 토큰 사용량**: ~98k / 200k (49%)
+- **Compact 사용 횟수**: 1회
+- **권장 조치**: 아직 여유 있음, compact 불필요
+- **다음 세션**: 새 세션 시작 권장 (컨텍스트 클린)
 
 ---
 
-## 15. 진행률
-
-**Phase 2 백엔드 배포: 50% 완료 (1/2 단계) ⏳**
-
-- ✅ Step 17: 배포 설정 (Dockerfile, render.yaml, GitHub Actions)
-- ⏳ Step 18: 실제 배포 (Neon + Render + GitHub Secrets) ← **다음 작업**
-
-**전체 프로젝트: ~35% 완료**
-- ✅ 백엔드 코어 (100%)
-- ⏳ 백엔드 배포 (50%)
-- ⬜ 프론트엔드 (0%)
-- ⬜ 모바일 (0%)
-
----
-
-## 16. 빠른 명령어
-
-```bash
-# 로컬 DB 시작
-docker compose up -d
-
-# 백엔드 빌드
-cd backend && ./gradlew build
-
-# 테스트 실행
-./gradlew test
-
-# 동시성 테스트만
-./gradlew test --tests "com.roulette.ConcurrencyTest"
-
-# 서버 실행
-./gradlew bootRun
-
-# Swagger UI
-http://localhost:8080/swagger-ui/index.html
-
-# Docker 빌드 테스트 (로컬)
-cd backend
-docker build -t roulette-backend .
-docker run -p 8080:8080 \
-  -e SPRING_PROFILES_ACTIVE=local \
-  -e DATABASE_URL=jdbc:postgresql://host.docker.internal:5432/roulette \
-  -e DATABASE_USERNAME=postgres \
-  -e DATABASE_PASSWORD=postgres \
-  -e ADMIN_NICKNAMES=admin \
-  roulette-backend
-```
-
----
-
-## 17. 배포 워크플로우
-
-```
-1. 코드 push to main
-   ↓
-2. GitHub Actions 트리거
-   ↓
-3. 빌드 & 테스트 (JUnit 5)
-   ↓
-4. Docker 이미지 빌드 (Multi-stage)
-   ↓
-5. Render Deploy Hook 호출
-   ↓
-6. Render: Docker 이미지 실행
-   ↓
-7. Health Check 통과 (/actuator/health)
-   ↓
-8. 배포 완료 (HTTPS 자동 활성화)
-```
-
----
-
-## 18. 다음 세션 시작 문구 (권장)
-
-> "HANDOFF.md 기준으로 맥락을 복구해줘. 다음 작업: Neon PostgreSQL 프로비저닝 (Step 2)부터 진행."
-
-또는
-
-> "백엔드 배포를 이어서 진행하자. Step 2(Neon 설정)부터 안내해줘."
+**작성자**: Claude Sonnet 4.5
+**작성일**: 2026-02-07 20:20 KST

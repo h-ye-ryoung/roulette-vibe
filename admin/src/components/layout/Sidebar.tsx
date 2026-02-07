@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils';
 const menuItems = [
   { path: '/', label: '대시보드' },
   { path: '/budget', label: '예산 관리' },
-  { path: '/roulette', label: '룰렛 관리' },
   { path: '/products', label: '상품 관리' },
   { path: '/orders', label: '주문 관리' },
 ];

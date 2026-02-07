@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import BudgetPage from './pages/BudgetPage';
+import ProductsPage from './pages/ProductsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,9 +50,8 @@ function App() {
               }
             >
               <Route index element={<DashboardPage />} />
-              <Route path="budget" element={<div>예산 관리 페이지</div>} />
-              <Route path="roulette" element={<div>룰렛 관리 페이지</div>} />
-              <Route path="products" element={<div>상품 관리 페이지</div>} />
+              <Route path="budget" element={<BudgetPage />} />
+              <Route path="products" element={<ProductsPage />} />
               <Route path="orders" element={<div>주문 관리 페이지</div>} />
             </Route>
           </Routes>
