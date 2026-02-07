@@ -9,6 +9,13 @@ spring:
       ddl-auto: update
     show-sql: false
 
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false  # TODO: 프론트엔드 Vercel 배포 후 true로 변경
+        same-site: none  # 크로스 오리진 쿠키 허용
+
 management:
   endpoints:
     web:
