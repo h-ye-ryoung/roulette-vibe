@@ -236,7 +236,6 @@ export default function ProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>상품명</TableHead>
                   <TableHead>설명</TableHead>
                   <TableHead className="text-right">가격</TableHead>
@@ -248,8 +247,7 @@ export default function ProductsPage() {
               <TableBody>
                 {products.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.id}</TableCell>
-                    <TableCell>{product.name}</TableCell>
+                    <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell className="max-w-xs truncate">
                       {product.description || '-'}
                     </TableCell>
