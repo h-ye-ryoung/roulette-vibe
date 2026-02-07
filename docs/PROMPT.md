@@ -2595,3 +2595,143 @@ LAST_LOG_CURSOR 이후의 프롬프트와 응답을
 ---
 
 <!-- LAST_LOG_CURSOR: 2026-02-06T20:59:00+09:00 -->
+
+---
+
+### User
+그럼 codex 리뷰는 잠시 중단하고 백엔드 배포부터 진행하자.
+
+1. CI/CD 자동화 배포를 필수로 세팅해.
+2. https로 배포
+3. 배포 스택, 버전 등의 정보를 명확히 적어 claude.md에 반영해.
+4. 필요한 환경변수는 나에게 요청해. 배포시 주요 환경변수는 절대 github에 노출하지 마.
+
+### Assistant
+백엔드 배포를 진행하겠습니다. CI/CD 자동화와 HTTPS 배포를 설정하겠습니다.
+
+[GitHub Actions workflow 파일 생성: .github/workflows/backend-deploy.yml]
+- Ubuntu Latest + JDK 21 (Temurin)
+- Build & Test → Artifact Upload → Deploy (Render Deploy Hook)
+
+[Render 배포 설정 파일 생성: render.yaml]
+- Free Tier, Oregon Region
+- Java 21 런타임
+- PostgreSQL 연동
+- Health Check: /actuator/health
+
+[CLAUDE.md 업데이트]
+- 배포 아키텍처 섹션 추가
+- GitHub Actions, Render, Neon PostgreSQL 상세 스펙 문서화
+- 배포 워크플로우 다이어그램
+
+배포를 완료하려면 다음 정보가 필요합니다:
+
+### Render 설정
+1. Render 계정 생성/로그인
+2. "New +" → "Web Service" 선택
+3. GitHub 저장소 연결 (roulette-vibe)
+4. render.yaml 자동 감지 후 설정 적용
+5. Deploy Hook URL 복사
+
+### Neon PostgreSQL 설정
+1. Neon 계정 생성/로그인
+2. "New Project" → Free Tier, US West (Oregon)
+3. 데이터베이스명: roulette
+4. 연결 정보 복사 (CONNECTION_STRING, USERNAME, PASSWORD)
+
+### GitHub Secrets 설정
+- RENDER_DEPLOY_HOOK
+- DATABASE_URL
+- DATABASE_USERNAME
+- DATABASE_PASSWORD
+- ADMIN_NICKNAMES
+
+---
+
+### User
+하나씩 설정하자. 먼저 render를 설정할 건데, Dockerfile 내용이 필요하지 않을까? render를 설정할때 필요한 파일이 있다면 설정하고, 내가 해야 할 일 리스트를 알려줘.
+
+### Assistant
+네, Render에서 Spring Boot 애플리케이션을 배포할 때 Dockerfile을 사용하는 것이 더 안정적입니다. Dockerfile을 생성하고 설정을 최적화하겠습니다.
+
+[backend/Dockerfile 생성]
+- Multi-stage build (Gradle 8.12-jdk21 + eclipse-temurin:21-jre-alpine)
+- 비root 유저 생성 (spring:spring)
+- Health check 내장
+- 빌드 캐시 최적화
+
+[backend/.dockerignore 생성]
+- .gradle, build, .idea, .env 등 제외
+
+[render.yaml 수정]
+- env: java → docker
+- dockerfilePath, dockerContext 추가
+
+[build.gradle.kts 수정]
+- spring-boot-starter-actuator 의존성 추가
+
+[application-prod.yml 수정]
+- management.endpoints.web.exposure.include: health
+- management.endpoint.health.show-details: when-authorized
+
+[SecurityConfig.kt 수정]
+- /actuator/health 엔드포인트 permitAll 추가
+
+## 당신이 해야 할 일 (순서대로)
+
+### Step 1: GitHub에 코드 푸시
+```bash
+git add .
+git commit -m "feat: Render 배포 설정 추가 (Docker)"
+git push origin main
+```
+
+### Step 2: Neon PostgreSQL 설정 (먼저!)
+1. Neon 접속 → 로그인/회원가입
+2. "New Project" 클릭
+3. 설정: roulette-vibe, US West (Oregon), PostgreSQL 16, Free
+4. Connection Details 복사 (Host, Database, Username, Password)
+5. Connection String 복사 (전체)
+
+### Step 3: Render Web Service 생성
+1. Render 접속 → 로그인/회원가입
+2. "New +" → "Web Service" 선택
+3. GitHub 저장소 연결 (roulette-vibe)
+4. render.yaml 자동 감지 확인
+
+### Step 4: Render 환경변수 설정
+"Environment" 탭에서 변수 추가:
+- SPRING_PROFILES_ACTIVE: prod
+- DATABASE_URL: jdbc:postgresql://[Neon Host]/neondb?sslmode=require
+- DATABASE_USERNAME: [Neon Username]
+- DATABASE_PASSWORD: [Neon Password]
+- ADMIN_NICKNAMES: admin
+- DAILY_BUDGET_DEFAULT: 100000
+- SERVER_PORT: 8080
+
+### Step 5: Render 배포 시작
+1. "Create Web Service" 클릭
+2. 자동 빌드 시작 (5~10분 소요)
+3. 로그 확인
+
+### Step 6: GitHub Secrets 설정
+1. GitHub 저장소 → Settings → Secrets and variables → Actions
+2. "New repository secret" 클릭
+3. Render Deploy Hook 복사
+4. GitHub Secret 추가: RENDER_DEPLOY_HOOK
+
+### Step 7: 배포 확인
+1. Render 대시보드에서 배포 완료 확인
+2. Health check 테스트: https://roulette-vibe-backend.onrender.com/actuator/health
+3. Swagger UI 확인: https://roulette-vibe-backend.onrender.com/swagger-ui/index.html
+
+---
+
+### User
+LAST_LOG_CURSOR 이후의 프롬프트와 응답을
+가공 없이 docs/PROMPT.md에 append 하고
+커서를 현재 시점으로 업데이트해줘
+
+---
+
+<!-- LAST_LOG_CURSOR: 2026-02-07T00:15:00+09:00 -->
