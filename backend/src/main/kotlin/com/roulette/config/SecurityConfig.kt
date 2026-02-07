@@ -24,9 +24,8 @@ class SecurityConfig(
             .cors { cors ->
                 cors.configurationSource {
                     org.springframework.web.cors.CorsConfiguration().apply {
-                        allowedOrigins = listOf(
-                            "http://localhost:5173",  // 로컬 프론트엔드
-                            "http://localhost:5174",  // 로컬 어드민
+                        allowedOriginPatterns = listOf(
+                            "http://localhost:*",     // 로컬 개발 (모든 포트)
                             "https://*.vercel.app"    // Vercel 배포 (프론트엔드/어드민)
                         )
                         allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
