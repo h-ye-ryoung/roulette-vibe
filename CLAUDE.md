@@ -374,6 +374,118 @@ PROMPT.md 하단에는 마지막 기록 시점을 나타내는 커서를 둔다.
 
 ---
 
+## 17. 어드민 웹 프론트엔드 (admin/)
+
+### 17.1 기술 스택
+
+| 항목 | 기술 | 버전 | 용도 |
+|---|---|---|---|
+| 프레임워크 | React | 18+ | UI 라이브러리 |
+| 언어 | TypeScript | 5+ | 타입 안전성 (strict mode) |
+| 빌드 도구 | Vite | 5+ | 빠른 개발 서버 |
+| 라우팅 | React Router | v6 | SPA 라우팅 |
+| 서버 상태 | TanStack Query | v5 | 데이터 페칭/캐싱 |
+| 폼 처리 | React Hook Form | 7+ | 비제어 컴포넌트 패턴 |
+| 폼 검증 | Zod | 3+ | 스키마 기반 검증 |
+| 스타일링 | Tailwind CSS | 3+ | 유틸리티 CSS |
+| UI 컴포넌트 | shadcn/ui | latest | Radix UI 기반 |
+| 클라이언트 상태 | React Context | - | 인증 상태만 |
+| 배포 | Vercel | - | 자동 배포/CDN |
+
+### 17.2 개발 원칙
+
+#### 1. 타입 안정성 (/typescript-advanced-types 스킬 활용)
+
+**Generic 타입으로 API 응답 래핑**:
+```typescript
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error?: ApiError;
+}
+```
+
+**Discriminated Unions로 상태 관리**:
+```typescript
+export type QueryState<T> =
+  | { status: 'loading' }
+  | { status: 'success'; data: T }
+  | { status: 'error'; error: Error };
+```
+
+**Utility Types로 타입 재사용**:
+```typescript
+export type ProductFormData = Pick<Product, 'name' | 'price' | 'stock'>;
+export type ProductUpdateData = Omit<Product, 'id' | 'createdAt'>;
+```
+
+#### 2. UI 개발 (/ccpp:frontend 스킬 활용)
+
+**빅테크 스타일 (Stripe, Vercel, Apple)**:
+- 깔끔한 레이아웃과 넓은 여백
+- 섬세한 그림자와 부드러운 애니메이션
+- 명확한 타이포그래피 계층 구조
+
+**일관된 디자인 시스템**:
+- shadcn/ui 컴포넌트로 통일된 UI
+- Tailwind CSS 클래스 순서 준수
+- 색상 팔레트 일관성 유지
+
+**접근성 준수 (ARIA)**:
+- 모든 인터랙티브 요소에 적절한 ARIA 속성
+- 키보드 네비게이션 지원
+- 스크린 리더 호환성
+
+#### 3. 코드 품질
+
+**React Hook Form으로 비제어 컴포넌트 패턴**:
+- 성능 최적화 (불필요한 리렌더링 방지)
+- Zod 스키마 통합으로 타입 안전한 폼 검증
+
+**TanStack Query로 선언적 데이터 페칭**:
+- 자동 캐싱 및 재검증
+- 낙관적 업데이트 (Optimistic Updates)
+- 에러 처리 및 재시도 로직 내장
+
+**shadcn/ui로 일관된 컴포넌트 재사용**:
+- 합성 패턴 (Composition Pattern)
+- 컴파운드 컴포넌트 (Compound Components)
+- 접근성 기본 제공 (Radix UI 기반)
+
+### 17.3 폴더 구조
+
+```
+admin/
+├── src/
+│   ├── api/                 # API 호출 함수
+│   │   ├── client.ts        # Axios 인스턴스
+│   │   ├── dashboard.ts
+│   │   ├── budget.ts
+│   │   ├── roulette.ts
+│   │   ├── products.ts
+│   │   └── orders.ts
+│   ├── components/
+│   │   ├── ui/              # shadcn/ui 컴포넌트
+│   │   ├── layout/          # Layout, Sidebar, Header
+│   │   └── shared/          # 공통 컴포넌트
+│   ├── pages/               # 페이지 (6개)
+│   ├── contexts/            # AuthContext
+│   ├── hooks/               # Custom hooks
+│   ├── types/               # TypeScript 타입
+│   └── lib/                 # 유틸리티
+├── .env.local               # 환경변수 (gitignore)
+└── vercel.json              # Vercel 배포 설정
+```
+
+### 17.4 관련 문서
+
+- **상세 명세**: `docs/ADMIN_SPEC.md`
+- **배포 전략**: `docs/ADMIN_SPEC.md` 섹션 14
+- **타입 전략**: `docs/ADMIN_SPEC.md` 섹션 15
+- **UI 전략**: `docs/ADMIN_SPEC.md` 섹션 16
+
+---
+
 ## 폴더 구조
 
 ```text

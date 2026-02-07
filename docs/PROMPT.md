@@ -3214,3 +3214,384 @@ LAST_LOG_CURSOR 이후의 프롬프트와 응답을
 ---
 
 <!-- LAST_LOG_CURSOR: 2026-02-07T08:30:00+09:00 -->
+
+### 사용자
+프론트엔드 시작할게. 우리는 2개의 웹을 만들어야 해. 하나는 사용자 웹, 하나는 어드민 웹이야. 둘은 따로 배포할 거야. 1차 목표는 '웹 어드민' 프론트엔드를 만드는 거야.
+
+[내 요구사항]
+1. 대시보드 화면
+2. 예산관리 화면
+3. 상품관리 화면
+4. 주문내역 화면
+
+이 요구사항을 확정하려고 하니, clarify.md를 기준으로 상세화해줘.
+
+---
+
+### Claude
+어드민 웹 프론트엔드 요구사항을 상세화하기 위해 몇 가지 질문드리겠습니다.
+
+[AskUserQuestion 도구 사용하여 질문]
+
+**질문 1: 대시보드 화면 구성**
+- 대시보드를 첫 화면으로 사용할까요, 아니면 별도의 메인 화면이 필요할까요?
+
+**질문 2: 화면 네비게이션 구조**
+- 4개 화면을 어떻게 연결할까요?
+  - 옵션 1: 왼쪽 사이드바 메뉴
+  - 옵션 2: 상단 탭 메뉴
+  - 옵션 3: 대시보드에서 각 화면으로 이동하는 카드
+
+**질문 3: 룰렛 관리 화면**
+- "룰렛 관리" 화면이 필요할까요? (룰렛 내역 조회, 취소 기능)
+
+**질문 4: 로그인 요구사항**
+- 어드민 웹도 로그인이 필요할까요?
+  - 필요하다면: 닉네임 기반 로그인 (USER와 동일 방식)
+  - 불필요하다면: 바로 대시보드 접근
+
+**질문 5: UI 라이브러리**
+- UI 컴포넌트 라이브러리 선호도가 있을까요?
+  - 옵션 1: shadcn/ui (Radix UI 기반, Tailwind)
+  - 옵션 2: MUI (Material-UI)
+  - 옵션 3: Ant Design
+  - 옵션 4: 직접 구현 (Tailwind만 사용)
+
+---
+
+### 사용자
+추가로 필수 기능이 테이블 목록, CRUD 폼, API 연동 이라는 것도 고려해줘.
+
+[답변]
+질문 1: 대시보드를 첫 화면으로
+질문 2: 왼쪽 사이드바 메뉴
+질문 3: 필요함 (별도 화면으로)
+질문 4: 필요함 (닉네임 기반, role=ADMIN 검증)
+질문 5: shadcn/ui
+
+---
+
+### Claude
+감사합니다! 요구사항이 명확해졌습니다.
+
+## 확정된 요구사항
+
+### 화면 구성 (6개 페이지)
+
+1. **로그인** (`/login`)
+   - 닉네임 입력 → POST /api/auth/login
+   - role=ADMIN 검증 (ADMIN이 아니면 접근 거부)
+
+2. **대시보드** (`/`) - 첫 화면
+   - GET /api/admin/dashboard
+   - 오늘 예산 현황 표시
+
+3. **예산 관리** (`/budget`)
+   - GET /api/admin/budget
+   - PUT /api/admin/budget
+
+4. **룰렛 관리** (`/roulette`)
+   - GET /api/admin/roulette/history
+   - POST /api/admin/roulette/{id}/cancel
+
+5. **상품 관리** (`/products`)
+   - GET /api/admin/products
+   - POST /api/admin/products (생성)
+   - PUT /api/admin/products/{id} (수정)
+   - DELETE /api/admin/products/{id} (삭제)
+
+6. **주문 관리** (`/orders`)
+   - GET /api/admin/orders
+   - POST /api/admin/orders/{id}/cancel
+
+### 레이아웃
+- **왼쪽 사이드바**: 5개 메뉴 (대시보드, 예산, 룰렛, 상품, 주문)
+- **상단 헤더**: 현재 사용자 닉네임, 로그아웃 버튼
+
+### 기술 스택
+- React 18 + TypeScript
+- Vite
+- React Router v6
+- TanStack Query (React Query)
+- shadcn/ui + Tailwind CSS
+- React Hook Form + Zod
+
+### 필수 기능
+- ✅ 테이블 목록 (shadcn/ui Table)
+- ✅ CRUD 폼 (React Hook Form + Zod)
+- ✅ API 연동 (TanStack Query)
+
+---
+
+### 사용자
+현재 어느 단계를 지나고 있는지 리스트업해봐
+
+---
+
+### Claude
+## 현재 진행 단계
+
+### ✅ 완료된 단계
+1. **명세 작성** - `docs/SPEC.md` 작성 완료
+2. **백엔드 구현** - Spring Boot API 22개 구현 완료
+3. **백엔드 배포** - Render + Neon PostgreSQL 배포 완료
+4. **Swagger 문서화** - @Operation 애노테이션 추가 완료
+
+### 🔄 현재 단계
+**5. 프론트엔드 요구사항 확정** ← 지금 여기
+- clarify 방식으로 요구사항 상세화 완료
+- 6개 페이지 구성 확정
+- 기술 스택 확정
+- 레이아웃 구조 확정
+
+### ⏭️ 다음 단계
+6. **플랜 작성** - `/ccpp:plan` 또는 `/ccpp:spec`
+7. **어드민 웹 구현** - `/admin` 디렉토리에 React 프로젝트 생성
+8. **어드민 웹 배포** - Vercel 배포
+9. **사용자 웹 구현** - `/frontend` 디렉토리
+10. **사용자 웹 배포** - Vercel 배포
+
+---
+
+### 사용자
+좋아, 요구사항을 확정했으니 구체적인 스펙을 고정하자. /ccpp:plan
+
+---
+
+### Claude
+Plan 모드는 구현 계획 수립을 위한 것이고, 지금은 명세서 작성이 더 적합합니다. `/ccpp:spec`을 사용하시겠어요?
+
+---
+
+### 사용자
+그럼 /ccpp:spec을 사용해.
+
+---
+
+### Claude
+[Skill 도구 호출: ccpp:spec]
+
+[ADMIN_SPEC.md 작성 완료]
+
+`docs/ADMIN_SPEC.md` 파일에 어드민 웹 프론트엔드 명세서를 작성했습니다.
+
+## 작성된 명세서 구조
+
+### 1. 개요
+- 프로젝트 목적 및 범위
+- 사용자 웹과의 차이점
+
+### 2. 기술 스택
+- React 18 + TypeScript
+- Vite, React Router v6
+- TanStack Query
+- shadcn/ui + Tailwind CSS
+- React Hook Form + Zod
+
+### 3. 화면 구성 (6개)
+각 화면별 상세 명세:
+- URL 경로
+- 필요한 API
+- UI 컴포넌트
+- 상태 관리
+- 폼 검증 규칙
+
+### 4. API 연동 방식
+- TanStack Query 패턴
+- Axios 설정 (withCredentials: true)
+- 에러 처리
+
+### 5. TypeScript 타입 정의
+- User, DashboardData, BudgetData
+- Product, Order, RouletteHistory
+- API 응답 타입
+
+### 6. 폴더 구조
+```
+admin/
+├── src/
+│   ├── api/           # API 호출 함수
+│   ├── components/    # 컴포넌트
+│   ├── pages/         # 페이지
+│   ├── contexts/      # Context
+│   ├── hooks/         # 커스텀 훅
+│   ├── types/         # 타입 정의
+│   └── lib/           # 유틸리티
+```
+
+### 7. 인증 처리
+- AuthContext 구현
+- PrivateRoute 컴포넌트
+- 세션 쿠키 기반 인증
+
+### 8. 보안 고려사항
+- CORS 설정 (이미 백엔드에 적용됨)
+- XSS 방지
+- CSRF 보호
+
+### 9. 테스트 계획
+- 단위 테스트 (React Testing Library)
+- E2E 테스트 (선택)
+
+### 10. 배포 전략
+- Vercel 배포
+- 환경변수 설정
+- 빌드 최적화
+
+명세서가 완성되었으니, 이제 구현을 시작할 수 있습니다!
+
+---
+
+### 사용자
+그럼 어드민 웹 환경설정을 시작해 (/admin 디렉토리) 이때 /react-patterns 를 사용해 설계 구조를 잡아
+
+---
+
+### Claude
+[Skill 도구 호출: ccpp:react-patterns]
+
+어드민 웹 환경설정을 시작하겠습니다. React 18 + TypeScript + Vite 기반으로 프로젝트를 초기화하고, `docs/ADMIN_SPEC.md`에 정의된 구조를 따라 설정하겠습니다.
+
+[Bash: Vite 프로젝트 초기화]
+```bash
+npm create vite@latest . -- --template react-ts
+```
+
+[Bash: 기본 패키지 설치]
+```bash
+npm install
+```
+
+[Bash: 핵심 의존성 설치]
+```bash
+npm install react-router-dom @tanstack/react-query @tanstack/react-query-devtools axios react-hook-form zod @hookform/resolvers
+```
+
+[Bash: Tailwind CSS 설치]
+```bash
+npm install -D tailwindcss postcss autoprefixer
+```
+
+[파일 생성: tailwind.config.js, postcss.config.js]
+
+[TypeScript 설정 수정]
+- `tsconfig.app.json`에 path alias 추가 (`@/*` → `./src/*`)
+- `vite.config.ts`에 resolve alias 추가
+
+[Bash: Node types 설치]
+```bash
+npm install -D @types/node
+```
+
+[Bash: shadcn/ui 의존성 설치]
+```bash
+npm install tailwindcss-animate class-variance-authority clsx tailwind-merge lucide-react
+```
+
+[폴더 구조 생성]
+```bash
+mkdir -p src/{api,components/{ui,layout,shared},pages,contexts,hooks,types,lib}
+```
+
+[핵심 파일 생성]
+
+1. **src/lib/utils.ts** - cn 유틸리티 함수
+2. **src/api/client.ts** - Axios 인스턴스 (withCredentials: true)
+3. **src/types/models.ts** - TypeScript 타입 정의
+4. **src/contexts/AuthContext.tsx** - 인증 컨텍스트
+5. **src/index.css** - Tailwind CSS 설정 + shadcn/ui 스타일 변수
+
+[shadcn/ui 컴포넌트 생성]
+- **src/components/ui/button.tsx**
+- **src/components/ui/card.tsx**
+- **src/components/ui/input.tsx**
+
+[페이지 컴포넌트 생성]
+- **src/pages/LoginPage.tsx** - 완전 구현 (폼 검증, 에러 처리)
+- **src/pages/DashboardPage.tsx** - 스켈레톤 (4개 카드)
+
+[레이아웃 컴포넌트 생성]
+- **src/components/layout/Sidebar.tsx** - 5개 메뉴 네비게이션
+- **src/components/layout/Header.tsx** - 사용자 정보 + 로그아웃
+- **src/components/layout/Layout.tsx** - Sidebar + Header + Outlet
+
+[라우팅 설정]
+- **src/App.tsx** 업데이트
+  - React Router 설정
+  - AuthProvider 적용
+  - QueryClientProvider 설정
+  - PrivateRoute 컴포넌트
+  - 6개 라우트 정의
+
+[환경변수 파일]
+- **.env.example** - 환경변수 예제
+- **.env.local** - 로컬 환경변수 (VITE_API_BASE_URL)
+
+[TypeScript 에러 수정]
+- AuthContext.tsx의 type import 수정 (verbatimModuleSyntax 대응)
+
+[Tailwind CSS 버전 조정]
+- v4 → v3로 다운그레이드 (PostCSS 호환성)
+- tailwind.config.js에 shadcn/ui 색상 변수 추가
+
+[빌드 검증]
+```bash
+npm run build
+```
+✅ 빌드 성공!
+- TypeScript 컴파일 통과
+- Vite 빌드 완료
+- 번들 크기: 324KB (gzip: 105KB)
+
+[문서 작성]
+- **README_SETUP.md** - 환경설정 완료 문서
+  - 프로젝트 구조
+  - 설치된 패키지
+  - 완료된 작업
+  - 다음 단계 가이드
+  - API 호출 패턴 예제
+  - 주의사항
+
+## ✅ 완료된 작업 요약
+
+### 프로젝트 초기화
+- Vite + React 18 + TypeScript 설정
+- 폴더 구조 생성
+- Path alias 설정
+
+### 핵심 패키지 설치
+- React Router v6 (라우팅)
+- TanStack Query (서버 상태)
+- Axios (API 호출)
+- React Hook Form + Zod (폼 처리)
+- Tailwind CSS + shadcn/ui (UI)
+
+### 핵심 기능 구현
+1. **API 클라이언트** - 세션 쿠키 자동 전송, 401 자동 리다이렉트
+2. **인증 시스템** - AuthContext, 로그인/로그아웃, ADMIN 권한 검증
+3. **라우팅 구조** - 6개 페이지, PrivateRoute
+4. **레이아웃** - Sidebar, Header, Layout
+5. **기본 페이지** - LoginPage (완성), DashboardPage (스켈레톤)
+
+### TypeScript 타입
+- User, Product, Order, RouletteHistory
+- DashboardData, BudgetData, PageInfo
+
+### 빌드 검증
+- ✅ TypeScript 컴파일
+- ✅ Vite 빌드
+- ✅ 번들 크기 최적화
+
+현재 상태: 환경설정 완료, 기본 구조 구축 완료
+다음 단계: API 함수 작성 → 페이지 구현
+
+---
+
+### 사용자
+LAST_LOG_CURSOR 이후의 프롬프트와 응답을
+가공 없이 docs/PROMPT.md에 append 하고
+커서를 현재 시점으로 업데이트해줘
+
+---
+
+<!-- LAST_LOG_CURSOR: 2026-02-07T18:58:00+09:00 -->
