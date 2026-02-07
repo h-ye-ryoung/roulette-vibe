@@ -1,7 +1,5 @@
 package com.roulette.auth
 
-import com.roulette.config.AppProperties
-import com.roulette.domain.user.Role
 import com.roulette.domain.user.User
 import com.roulette.domain.user.UserRepository
 import jakarta.servlet.http.HttpSession
@@ -13,8 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 class AuthService(
-    private val userRepository: UserRepository,
-    private val appProperties: AppProperties
+    private val userRepository: UserRepository
 ) {
 
     @Transactional
@@ -24,12 +21,11 @@ class AuthService(
 
         val sessionUser = SessionUser(
             id = user.id,
-            nickname = user.nickname,
-            role = user.role.name
+            nickname = user.nickname
         )
         session.setAttribute("user", sessionUser)
 
-        val authorities = listOf(SimpleGrantedAuthority("ROLE_${user.role.name}"))
+        val authorities = listOf(SimpleGrantedAuthority("ROLE_USER"))
         val authentication = UsernamePasswordAuthenticationToken(
             sessionUser,
             null,
@@ -39,14 +35,12 @@ class AuthService(
 
         return LoginResponse(
             id = user.id,
-            nickname = user.nickname,
-            role = user.role.name
+            nickname = user.nickname
         )
     }
 
     private fun createUser(nickname: String): User {
-        val role = if (appProperties.isAdmin(nickname)) Role.ADMIN else Role.USER
-        val user = User(nickname = nickname, role = role)
+        val user = User(nickname = nickname)
         return userRepository.save(user)
     }
 }

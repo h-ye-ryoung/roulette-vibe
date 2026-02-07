@@ -37,7 +37,8 @@
       "Bash(npm create:*)",
       "Bash(npx tailwindcss:*)",
       "Bash(./node_modules/.bin/tailwindcss init:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(./gradlew clean build:*)"
     ]
   }
 }

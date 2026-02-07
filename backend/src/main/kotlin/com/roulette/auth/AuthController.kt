@@ -21,8 +21,6 @@ class AuthController(
         summary = "로그인",
         description = """
             닉네임으로 로그인합니다. 사용자가 없으면 자동으로 생성됩니다.
-            - 환경변수 ADMIN_NICKNAMES에 포함된 닉네임은 ADMIN 역할 부여
-            - 그 외 닉네임은 USER 역할 부여
             - 세션 쿠키(JSESSIONID)가 발급됩니다.
         """
     )
@@ -48,7 +46,7 @@ class AuthController(
 
     @Operation(
         summary = "현재 사용자 정보 조회",
-        description = "로그인한 사용자의 정보(ID, 닉네임, 역할)를 조회합니다."
+        description = "로그인한 사용자의 정보(ID, 닉네임)를 조회합니다."
     )
     @GetMapping("/me")
     fun me(session: HttpSession): ResponseEntity<ApiResponse<LoginResponse>> {
@@ -60,8 +58,7 @@ class AuthController(
             ApiResponse.success(
                 LoginResponse(
                     id = userInfo.id,
-                    nickname = userInfo.nickname,
-                    role = userInfo.role
+                    nickname = userInfo.nickname
                 )
             )
         )

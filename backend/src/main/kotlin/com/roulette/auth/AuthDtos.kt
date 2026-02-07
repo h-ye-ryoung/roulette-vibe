@@ -12,14 +12,12 @@ data class LoginRequest(
 
 data class LoginResponse(
     val id: Long,
-    val nickname: String,
-    val role: String
+    val nickname: String
 )
 
 data class SessionUser(
     val id: Long,
-    val nickname: String,
-    val role: String
+    val nickname: String
 ) : Serializable {
     companion object {
         private const val serialVersionUID = 1L

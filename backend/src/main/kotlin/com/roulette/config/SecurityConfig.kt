@@ -40,8 +40,8 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/user/**").hasRole("USER")
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    .requestMatchers("/api/admin/**").permitAll()  // 어드민은 인증 불필요
+                    .requestMatchers("/api/user/**").authenticated()  // 사용자는 세션 인증 필요
                     .requestMatchers(
                         "/swagger-ui/**",
                         "/swagger-ui.html",

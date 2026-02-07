@@ -24,7 +24,7 @@ class SessionAuthenticationFilter : OncePerRequestFilter() {
         if (session != null) {
             val sessionUser = session.getAttribute("user") as? SessionUser
             if (sessionUser != null && SecurityContextHolder.getContext().authentication == null) {
-                val authorities = listOf(SimpleGrantedAuthority("ROLE_${sessionUser.role}"))
+                val authorities = listOf(SimpleGrantedAuthority("ROLE_USER"))
                 val authentication = UsernamePasswordAuthenticationToken(
                     sessionUser,
                     null,
