@@ -21,6 +21,21 @@ class SecurityConfig(
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
+            .cors { cors ->
+                cors.configurationSource {
+                    org.springframework.web.cors.CorsConfiguration().apply {
+                        allowedOrigins = listOf(
+                            "http://localhost:5173",  // 로컬 프론트엔드
+                            "http://localhost:5174",  // 로컬 어드민
+                            "https://*.vercel.app"    // Vercel 배포 (프론트엔드/어드민)
+                        )
+                        allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        allowedHeaders = listOf("*")
+                        allowCredentials = true
+                        maxAge = 3600
+                    }
+                }
+            }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) }
             .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .authorizeHttpRequests { auth ->
