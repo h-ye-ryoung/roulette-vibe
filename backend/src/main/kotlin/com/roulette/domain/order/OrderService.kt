@@ -100,7 +100,18 @@ class OrderService(
             )
         }
 
-        // 8. 잔여 포인트 계산
+        // 8. USED 타입 레코드 생성 (포인트 사용 내역 표시용)
+        val usedPointLedger = com.roulette.domain.point.PointLedger(
+            userId = userId,
+            amount = -totalPrice,  // 음수로 저장 (차감)
+            balance = 0,  // 사용 내역은 balance 0
+            type = com.roulette.domain.point.PointType.USED,
+            issuedAt = now,
+            expiresAt = now.plusDays(30)  // 만료일은 의미 없지만 필수 필드
+        )
+        pointLedgerRepository.save(usedPointLedger)
+
+        // 9. 잔여 포인트 계산
         val remainingBalance = pointLedgerRepository.sumAvailableBalance(userId, now)
 
         return CreateOrderResponse(

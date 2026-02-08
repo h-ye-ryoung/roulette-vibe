@@ -12,12 +12,13 @@ import {
   getDaysUntilExpiry,
   isExpiredPoint,
   isExpiringSoonPoint,
+  isIncreaseType,
   type PointItem,
 } from '@/api/points';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, TrendingUp, TrendingDown, Undo2 } from 'lucide-react';
+import { Clock, Plus, Minus } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { FullScreenLoading } from '@/components/LoadingSpinner';
 
@@ -184,10 +185,12 @@ function PointItemCard({ item }: PointItemCardProps) {
   const typeColor = getPointTypeColor(item.type);
   const typeLabel = getPointTypeLabel(item.type);
   const daysLeft = getDaysUntilExpiry(item.expiresAt);
+  const isIncrease = isIncreaseType(item.type);  // EARN, REFUND
 
   // 타입별 아이콘
-  // EARNED: 획득 (룰렛), USED: 사용 (상품 구매), REFUND: 환불 (주문 취소)
-  const TypeIcon = item.type === 'EARNED' ? TrendingUp : item.type === 'USED' ? TrendingDown : Undo2;
+  // + 증가: EARN (룰렛 참여), REFUND (포인트 환불)
+  // - 차감: USED (상품 주문), RECLAIMED (포인트 회수)
+  const TypeIcon = isIncrease ? Plus : Minus;
 
   return (
     <div
@@ -209,13 +212,9 @@ function PointItemCard({ item }: PointItemCardProps) {
               <span className={`text-sm font-medium ${isExpired ? 'text-gray-400' : 'text-gray-700'}`}>
                 {typeLabel}
               </span>
-              <span
-                className={`text-base font-bold ${
-                  isExpired ? 'text-gray-400' : 'bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent'
-                }`}
-              >
-                {item.type === 'USED' ? '-' : '+'}
-                {item.amount.toLocaleString()}p
+              <span className={`text-base font-bold ${isExpired ? 'text-gray-400' : typeColor}`}>
+                {isIncrease ? '+' : '-'}
+                {Math.abs(item.amount).toLocaleString()}p
               </span>
             </div>
             <div className="flex items-center gap-2 mt-0.5">

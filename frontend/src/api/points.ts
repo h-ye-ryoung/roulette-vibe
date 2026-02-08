@@ -13,11 +13,12 @@ type ISODateTimeString = string & { readonly __brand: 'ISODateTime' };
 
 /**
  * Discriminated Union: Point Type
- * - EARNED: 룰렛으로 획득한 포인트
- * - USED: 상품 구매로 사용한 포인트
- * - REFUND: 주문 취소로 환불받은 포인트
+ * - EARN: 룰렛으로 획득한 포인트 (증가, +)
+ * - REFUND: 주문 취소로 환불받은 포인트 (증가, +)
+ * - USED: 상품 구매로 사용한 포인트 (차감, -)
+ * - RECLAIMED: 룰렛 취소로 회수된 포인트 (차감, -)
  */
-type PointType = 'EARNED' | 'USED' | 'REFUND';
+type PointType = 'EARN' | 'REFUND' | 'USED' | 'RECLAIMED';
 
 /**
  * Utility Type: Point Status (Computed)
@@ -230,9 +231,10 @@ export function withNavigation(response: PointHistoryResponse): PointHistoryWith
  */
 export function getPointTypeLabel(type: PointType): string {
   const labels: Record<PointType, string> = {
-    EARNED: '획득',
-    USED: '사용',
-    REFUND: '환불',
+    EARN: '룰렛 참여',
+    REFUND: '포인트 환불',
+    USED: '상품 주문',
+    RECLAIMED: '포인트 회수',
   };
   return labels[type];
 }
@@ -242,11 +244,26 @@ export function getPointTypeLabel(type: PointType): string {
  */
 export function getPointTypeColor(type: PointType): string {
   const colors: Record<PointType, string> = {
-    EARNED: 'text-green-600',
-    USED: 'text-red-600',
-    REFUND: 'text-blue-600',
+    EARN: 'text-green-600',      // 증가 (초록)
+    REFUND: 'text-green-600',    // 증가 (초록)
+    USED: 'text-red-600',        // 차감 (빨강)
+    RECLAIMED: 'text-red-600',   // 차감 (빨강)
   };
   return colors[type];
+}
+
+/**
+ * 포인트 타입이 증가(+)인지 확인
+ */
+export function isIncreaseType(type: PointType): boolean {
+  return type === 'EARN' || type === 'REFUND';
+}
+
+/**
+ * 포인트 타입이 차감(-)인지 확인
+ */
+export function isDecreaseType(type: PointType): boolean {
+  return type === 'USED' || type === 'RECLAIMED';
 }
 
 /**

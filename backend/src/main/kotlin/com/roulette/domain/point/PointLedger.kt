@@ -5,8 +5,10 @@ import jakarta.persistence.*
 import java.time.LocalDateTime
 
 enum class PointType {
-    EARN,    // 룰렛으로 획득
-    REFUND   // 주문 취소로 환불
+    EARN,      // 룰렛으로 획득 (증가, +)
+    REFUND,    // 주문 취소로 환불 (증가, +)
+    USED,      // 상품 주문으로 사용 (차감, -)
+    RECLAIMED  // 룰렛 취소로 회수 (차감, -)
 }
 
 @Entity

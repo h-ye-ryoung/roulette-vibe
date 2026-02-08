@@ -356,6 +356,19 @@ class AdminService(
         // 남은 포인트만 회수 (balance를 0으로)
         pointLedger.balance = 0
 
+        // RECLAIMED 타입 레코드 생성 (포인트 회수 내역 표시용)
+        if (reclaimedAmount > 0) {
+            val reclaimedPointLedger = com.roulette.domain.point.PointLedger(
+                userId = rouletteHistory.userId,
+                amount = -reclaimedAmount,  // 음수로 저장 (회수)
+                balance = 0,  // 회수 내역은 balance 0
+                type = com.roulette.domain.point.PointType.RECLAIMED,
+                issuedAt = java.time.LocalDateTime.now(),
+                expiresAt = java.time.LocalDateTime.now().plusDays(30)  // 만료일은 의미 없지만 필수 필드
+            )
+            pointLedgerRepository.save(reclaimedPointLedger)
+        }
+
         // PDP-5: 당일 취소면 예산 복구
         val spinDate = rouletteHistory.spinDate
         val cancelDate = LocalDate.now(kstZone)

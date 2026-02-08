@@ -29,7 +29,7 @@ BEGIN
         v_user_id,
         300,
         0,  -- 만료되어 잔액 0
-        'EARNED',
+        'EARN',
         v_now - INTERVAL '35 days',  -- 35일 전 지급
         v_now - INTERVAL '5 days',   -- 5일 전 만료
         NULL
@@ -48,7 +48,7 @@ BEGIN
         v_user_id,
         500,
         500,  -- 사용하지 않음
-        'EARNED',
+        'EARN',
         v_now - INTERVAL '25 days',  -- 25일 전 지급
         v_now + INTERVAL '5 days',   -- 5일 후 만료 (D-5)
         NULL
@@ -67,7 +67,7 @@ BEGIN
         v_user_id,
         700,
         700,  -- 사용하지 않음
-        'EARNED',
+        'EARN',
         v_now - INTERVAL '27 days',  -- 27일 전 지급
         v_now + INTERVAL '3 days',   -- 3일 후 만료 (D-3)
         NULL
@@ -86,7 +86,7 @@ BEGIN
         v_user_id,
         1000,
         1000,  -- 사용하지 않음
-        'EARNED',
+        'EARN',
         v_now - INTERVAL '10 days',  -- 10일 전 지급
         v_now + INTERVAL '20 days',  -- 20일 후 만료
         NULL
@@ -105,7 +105,7 @@ BEGIN
         v_user_id,
         800,
         500,  -- 300p 사용, 500p 남음
-        'EARNED',
+        'EARN',
         v_now - INTERVAL '5 days',   -- 5일 전 지급
         v_now + INTERVAL '25 days',  -- 25일 후 만료
         NULL
