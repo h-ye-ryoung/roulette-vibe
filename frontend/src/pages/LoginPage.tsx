@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { ButtonLoading } from '@/components/LoadingSpinner';
 
 export default function LoginPage() {
   const [nickname, setNickname] = useState('');
@@ -42,20 +41,31 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            🎰 포인트 룰렛
-          </CardTitle>
-          <CardDescription className="text-center">
-            닉네임을 입력하고 룰렛을 돌려보세요!
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 p-4">
+      {/* 로그인 카드 - 유리모피즘 */}
+      <div className="w-full max-w-md">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+          {/* 헤더 */}
+          <div className="px-8 pt-8 pb-6 text-center space-y-3">
+            <div className="text-5xl mb-2">🎰</div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              포인트 룰렛
+            </h1>
+            <p className="text-gray-600">
+              닉네임을 입력하고 행운의 룰렛을 돌려보세요!
+            </p>
+          </div>
+
+          {/* 폼 */}
+          <form onSubmit={handleSubmit} className="px-8 pb-8 space-y-6">
+            {/* 닉네임 입력 */}
             <div className="space-y-2">
-              <Label htmlFor="nickname">닉네임</Label>
+              <label
+                htmlFor="nickname"
+                className="block text-sm font-medium text-gray-700"
+              >
+                닉네임
+              </label>
               <Input
                 id="nickname"
                 type="text"
@@ -64,25 +74,36 @@ export default function LoginPage() {
                 onChange={(e) => setNickname(e.target.value)}
                 disabled={isLoading}
                 autoFocus
+                className="h-12 text-base border-gray-300 focus:border-purple-500 focus:ring-purple-500"
               />
             </div>
+
+            {/* 에러 메시지 */}
             {error && (
-              <div className="text-sm text-red-500">
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}
-          </CardContent>
-          <CardFooter>
+
+            {/* 시작 버튼 */}
             <Button
               type="submit"
-              className="w-full"
               disabled={isLoading}
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              {isLoading ? '로그인 중...' : '시작하기'}
+              {isLoading ? <ButtonLoading /> : '시작하기 →'}
             </Button>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+
+          {/* 하단 장식 */}
+          <div className="h-2 bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600" />
+        </div>
+
+        {/* 안내 텍스트 */}
+        <p className="mt-6 text-center text-sm text-gray-600">
+          닉네임이 없으면 자동으로 새 계정이 생성됩니다
+        </p>
+      </div>
     </div>
   );
 }
