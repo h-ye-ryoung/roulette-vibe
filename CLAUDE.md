@@ -516,6 +516,258 @@ admin/
 
 ---
 
+## 18. 사용자 웹 프론트엔드 (frontend/)
+
+### 18.1 기술 스택
+
+| 항목 | 기술 | 버전 | 용도 |
+|---|---|---|---|
+| 프레임워크 | React | 18+ | UI 라이브러리 |
+| 언어 | TypeScript | 5+ | 타입 안전성 (strict mode) |
+| 빌드 도구 | Vite | 5+ | 빠른 개발 서버 |
+| 라우팅 | React Router | v6 | SPA 라우팅 |
+| 서버 상태 | TanStack Query | v5 | 데이터 페칭/캐싱 |
+| 폼 처리 | React Hook Form | 7+ | 비제어 컴포넌트 패턴 |
+| 폼 검증 | Zod | 3+ | 스키마 기반 검증 |
+| 스타일링 | Tailwind CSS | 3+ | 유틸리티 CSS |
+| UI 컴포넌트 | shadcn/ui | latest | Radix UI 기반 |
+| 클라이언트 상태 | React Context | - | 인증 상태만 |
+| 날짜 처리 | date-fns | 4+ | 날짜 포맷팅 |
+| 배포 | Vercel | - | 자동 배포/CDN |
+
+### 18.2 디자인 원칙 (필수)
+
+#### 1. 레이아웃 통일
+
+**AppLayout 구조** (모든 페이지 공통):
+```tsx
+<div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50">
+  <Header title={title} />
+  <main className="flex items-center justify-center min-h-[calc(100vh-7.5rem)]">
+    <div className="w-full max-w-screen-sm px-4 py-4">
+      {children}
+    </div>
+  </main>
+  <BottomNav />
+</div>
+```
+
+**핵심 규칙**:
+- ✅ 모든 페이지는 `AppLayout`으로 래핑
+- ✅ 상단바(`Header`) 고정: sticky, backdrop-blur
+- ✅ 하단바(`BottomNav`) 고정: 4개 탭 네비게이션
+- ✅ 중앙 정렬: `flex items-center justify-center`
+- ✅ 컨테이너: `max-w-screen-sm` (모바일 우선)
+- ✅ 여백: `px-4 py-4` (일관된 패딩)
+
+#### 2. 색상 팔레트 (Purple-Pink 그라디언트)
+
+**배경**:
+```css
+bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50
+```
+
+**메인 그라디언트** (제목, 금액, 버튼):
+```css
+bg-gradient-to-r from-purple-600 to-pink-600
+```
+
+**그라디언트 텍스트**:
+```css
+bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent
+```
+
+**버튼**:
+```css
+bg-gradient-to-r from-purple-600 to-pink-600
+hover:from-purple-700 hover:to-pink-700
+```
+
+**보조 색상**:
+- 참여 완료/알림: `bg-gradient-to-r from-purple-100 to-pink-100`
+- 만료 예정: `bg-gradient-to-r from-orange-100 to-red-100`
+- 카드 배경: `bg-gradient-to-r from-purple-50/30 to-pink-50/30`
+
+#### 3. 카드 스타일 (유리모피즘)
+
+**기본 카드** (잔액, 정보 표시):
+```tsx
+<Card className="backdrop-blur-lg bg-white/70 border-white/20 shadow-xl">
+  <CardHeader>
+    <CardTitle className="text-center text-lg">{title}</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="text-center">
+      <div className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        {value}
+      </div>
+    </div>
+  </CardContent>
+</Card>
+```
+
+**알림 배너** (참여 완료, 만료 예정):
+```tsx
+<div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-3 border border-purple-200">
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-2">
+      <span className="text-lg">✅</span>
+      <p className="text-sm font-medium text-gray-700">{message}</p>
+    </div>
+    <p className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+      {value}
+    </p>
+  </div>
+</div>
+```
+
+#### 4. 환영 메시지 (모든 페이지 상단)
+
+**필수 패턴**:
+```tsx
+<div className="text-center space-y-1">
+  <p className="text-lg font-semibold text-gray-800">
+    <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+      {user?.nickname}
+    </span>
+    님, 환영합니다! 👋
+  </p>
+  <p className="text-sm text-gray-600">{description}</p>
+</div>
+```
+
+#### 5. 여백 및 간격
+
+**섹션 간 간격**:
+```tsx
+<div className="space-y-6">  // 페이지 전체
+```
+
+**카드 내부**:
+```tsx
+<CardContent className="space-y-4">  // 카드 내 요소
+```
+
+**목록 아이템**:
+```tsx
+<div className="space-y-2">  // 리스트 아이템 (컴팩트)
+<div className="space-y-3">  // 리스트 아이템 (일반)
+```
+
+**환영 메시지/텍스트 그룹**:
+```tsx
+<div className="space-y-1">  // 텍스트 그룹
+```
+
+#### 6. 정보 밀도
+
+**큰 숫자 (강조)**:
+```tsx
+text-5xl font-bold  // 포인트 잔액, 예산
+text-4xl font-bold  // 룰렛 당첨 금액
+```
+
+**일반 금액**:
+```tsx
+text-lg font-bold   // 내역 금액
+text-base font-bold // 작은 카드 금액
+```
+
+**보조 텍스트**:
+```tsx
+text-sm text-gray-600  // 설명 텍스트
+text-xs text-gray-500  // 날짜, 부가 정보
+```
+
+#### 7. 페이지 일관성 체크리스트
+
+새 페이지 추가 시 반드시 확인:
+- [ ] `AppLayout`으로 래핑
+- [ ] 환영 메시지 포함 (`{user?.nickname}님...`)
+- [ ] Purple-Pink 그라디언트 사용
+- [ ] 유리모피즘 카드 스타일
+- [ ] `space-y-6` 섹션 간격
+- [ ] 중앙 정렬 텍스트 (제목, 금액)
+- [ ] 큰 숫자는 그라디언트 텍스트
+- [ ] 로딩 상태: `<FullScreenLoading />`
+- [ ] 빈 상태: 이모지 + 안내 문구
+
+### 18.3 폴더 구조
+
+```
+frontend/
+├── src/
+│   ├── api/                 # API 호출 함수
+│   │   ├── client.ts        # Axios 인스턴스
+│   │   ├── auth.ts          # 인증 API
+│   │   ├── roulette.ts      # 룰렛 API
+│   │   ├── points.ts        # 포인트 API (Advanced Types)
+│   │   ├── products.ts      # 상품 API
+│   │   └── orders.ts        # 주문 API
+│   ├── components/
+│   │   ├── ui/              # shadcn/ui 컴포넌트
+│   │   ├── layout/          # AppLayout, Header, BottomNav
+│   │   ├── BudgetCard.tsx   # 예산 카드
+│   │   ├── RouletteWheel.tsx # 룰렛 휠
+│   │   └── LoadingSpinner.tsx # 로딩 애니메이션
+│   ├── pages/               # 페이지 (5개)
+│   │   ├── LoginPage.tsx    # 로그인
+│   │   ├── RoulettePage.tsx # 룰렛 (홈)
+│   │   ├── PointsPage.tsx   # 포인트 내역
+│   │   ├── ProductsPage.tsx # 상품 목록
+│   │   └── OrdersPage.tsx   # 주문 내역
+│   ├── contexts/            # AuthContext
+│   ├── hooks/               # Custom hooks
+│   ├── types/               # TypeScript 타입
+│   └── lib/                 # 유틸리티
+├── .env.local               # 환경변수 (gitignore)
+└── vercel.json              # Vercel 배포 설정
+```
+
+### 18.4 TypeScript Advanced Types 활용
+
+포인트 내역 페이지에서 사용한 패턴을 다른 페이지에도 적용:
+
+**Branded Types**:
+```typescript
+type ISODateTimeString = string & { readonly __brand: 'ISODateTime' };
+```
+
+**Discriminated Unions**:
+```typescript
+type Status = 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+```
+
+**Type Guards**:
+```typescript
+function isExpired(item: Item): item is Item & { expired: true } {
+  return item.expired;
+}
+```
+
+**Utility Types**:
+```typescript
+type PaginatedResponse<T> = {
+  readonly items: readonly T[];
+  readonly pageInfo: PageInfo;
+};
+```
+
+### 18.5 배포 전략
+
+**Vercel 자동 배포**:
+- Git push 시 자동 배포
+- 환경변수: `VITE_API_BASE_URL` (배포된 백엔드 URL)
+- 프리뷰 배포: PR별 자동 생성
+- Production: main 브랜치 머지 시
+
+**로컬 개발**:
+- 배포된 백엔드 API 사용 (`.env.local`)
+- 로컬 백엔드 실행 불필요
+- 실제 배포 환경과 동일한 조건 테스트
+
+---
+
 ## 폴더 구조
 
 ```text
