@@ -25,7 +25,9 @@
       "Bash(lsof:*)",
       "Bash(psql:*)",
       "Bash(docker exec:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(__NEW_LINE_92c146063a7de7fc__ echo \"\")",
+      "Bash(backend/db-migration-point-types.sql << 'EOF'\n-- Add USED and RECLAIMED types to point_ledger type check constraint\nALTER TABLE point_ledger DROP CONSTRAINT IF EXISTS point_ledger_type_check;\nALTER TABLE point_ledger ADD CONSTRAINT point_ledger_type_check \n  CHECK \\(type IN \\('EARN', 'REFUND', 'USED', 'RECLAIMED'\\)\\);\nEOF)"
     ]
   }
 }
