@@ -8,7 +8,7 @@ import {
   type ProductWithPurchaseInfo,
 } from '@/api/products';
 import { getBalance } from '@/api/points';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -116,7 +116,7 @@ export default function ProductsPage() {
 
   return (
     <AppLayout title="🛍️ 상품 구매">
-      <div className="space-y-6">
+      <div className="space-y-6 pb-6">
         {/* 환영 메시지 */}
         <div className="text-center space-y-1">
           <p className="text-lg font-semibold text-gray-800">
@@ -146,9 +146,6 @@ export default function ProductsPage() {
         <Card className="backdrop-blur-lg bg-white/70 border-white/20 shadow-xl">
           <CardHeader>
             <CardTitle className="text-center text-lg">상품 목록</CardTitle>
-            <CardDescription className="text-center">
-              구매 가능한 상품 {productsWithInfo.length}개
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {productsWithInfo.length > 0 ? (
@@ -245,12 +242,12 @@ function ProductCard({ product, onPurchaseClick, isPurchasing }: ProductCardProp
         </div>
 
         {/* 구매 버튼 */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex flex-col items-center gap-1">
           <Button
             size="sm"
             onClick={() => onPurchaseClick(product)}
             disabled={!product.canPurchase || isPurchasing}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50"
           >
             {isPurchasing ? (
               '구매 중...'
@@ -261,6 +258,9 @@ function ProductCard({ product, onPurchaseClick, isPurchasing }: ProductCardProp
               </>
             )}
           </Button>
+          {product.canPurchase && !isPurchasing && (
+            <span className="text-xs text-green-600 font-medium">구매 가능</span>
+          )}
         </div>
       </div>
     </div>
