@@ -14,7 +14,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import BudgetCard from '@/components/BudgetCard';
 import RouletteWheel from '@/components/RouletteWheel';
 import { FullScreenLoading, ButtonLoading } from '@/components/LoadingSpinner';
-import { getBudget, spin, type SpinResponse } from '@/api/roulette';
+import { getBudget, getStatus, spin, type SpinResponse } from '@/api/roulette';
 import { AxiosError } from 'axios';
 
 interface ApiError {
@@ -28,13 +28,18 @@ export default function RoulettePage() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<SpinResponse | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
-  const [hasParticipated, setHasParticipated] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 예산 조회
-  const { data: budget, isLoading } = useQuery({
+  const { data: budget, isLoading: isBudgetLoading } = useQuery({
     queryKey: ['budget'],
     queryFn: getBudget,
+  });
+
+  // 룰렛 상태 조회 (참여 여부, 잔여 예산, 이력)
+  const { data: status, isLoading: isStatusLoading } = useQuery({
+    queryKey: ['roulette-status'],
+    queryFn: getStatus,
   });
 
   // 룰렛 참여
@@ -49,7 +54,6 @@ export default function RoulettePage() {
       const errorMsg = error.response?.data?.error?.message;
 
       if (errorCode === 'ALREADY_PARTICIPATED') {
-        setHasParticipated(true);
         setErrorMessage('오늘은 이미 참여하셨습니다. 내일 다시 도전해주세요!');
       } else if (errorCode === 'BUDGET_EXHAUSTED') {
         setErrorMessage('오늘 예산이 모두 소진되었습니다.');
@@ -61,7 +65,7 @@ export default function RoulettePage() {
   });
 
   const handleSpin = () => {
-    if (hasParticipated || isSpinning) return;
+    if (status?.participated || isSpinning) return;
     setErrorMessage(null);
     spinMutation.mutate();
   };
@@ -70,20 +74,18 @@ export default function RoulettePage() {
     setTimeout(() => {
       setIsSpinning(false);
       setShowResultModal(true);
-      // 예산 정보 갱신
+      // 예산 및 상태 정보 갱신
       queryClient.invalidateQueries({ queryKey: ['budget'] });
+      queryClient.invalidateQueries({ queryKey: ['roulette-status'] });
     }, 500);
   };
 
   const handleCloseModal = () => {
     setShowResultModal(false);
-    if (spinResult) {
-      setHasParticipated(true);
-    }
   };
 
-  if (isLoading) {
-    return <FullScreenLoading message="예산 정보를 불러오는 중..." />;
+  if (isBudgetLoading || isStatusLoading) {
+    return <FullScreenLoading message="정보를 불러오는 중..." />;
   }
 
   return (
@@ -103,6 +105,21 @@ export default function RoulettePage() {
         {/* 예산 카드 */}
         {budget && <BudgetCard budget={budget} />}
 
+        {/* 오늘 참여 이력 */}
+        {status?.history && (
+          <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-3 border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">✅</span>
+                <p className="text-sm font-medium text-gray-700">오늘 참여 완료</p>
+              </div>
+              <p className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                +{status.history.amount.toLocaleString()}p
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 룰렛 휠 */}
         <div className="py-4">
           <RouletteWheel
@@ -116,20 +133,27 @@ export default function RoulettePage() {
         <div className="flex flex-col items-center space-y-3">
           <Button
             onClick={handleSpin}
-            disabled={hasParticipated || isSpinning || spinMutation.isPending}
+            disabled={status?.participated || isSpinning || spinMutation.isPending}
             className="w-full max-w-xs h-14 text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transform transition-transform hover:scale-105"
           >
             {isSpinning || spinMutation.isPending ? (
               <ButtonLoading />
-            ) : hasParticipated ? (
+            ) : status?.participated ? (
               '오늘 참여 완료'
             ) : (
               '룰렛 돌리기 →'
             )}
           </Button>
-          <p className="text-sm text-gray-500">
-            {hasParticipated ? '내일 다시 도전해주세요!' : '하루 1번 참여 가능'}
-          </p>
+          <div className="text-center space-y-1">
+            <p className="text-sm text-gray-500">
+              {status?.participated ? '내일 다시 도전해주세요!' : '하루 1번 참여 가능'}
+            </p>
+            {status && (
+              <p className="text-xs text-gray-400">
+                잔여 예산: {status.remainingBudget.toLocaleString()}p
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

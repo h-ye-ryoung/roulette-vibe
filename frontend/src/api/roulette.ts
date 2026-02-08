@@ -12,6 +12,18 @@ export interface BudgetResponse {
   used: number;
 }
 
+export interface RouletteHistoryDto {
+  historyId: number;
+  amount: number;
+  spinDate: string; // YYYY-MM-DD
+}
+
+export interface RouletteStatusResponse {
+  participated: boolean;
+  remainingBudget: number;
+  history: RouletteHistoryDto | null;
+}
+
 export async function spin(): Promise<SpinResponse> {
   const response = await apiClient.post<ApiResponse<SpinResponse>>(
     '/api/user/roulette/spin'
@@ -22,6 +34,13 @@ export async function spin(): Promise<SpinResponse> {
 export async function getBudget(): Promise<BudgetResponse> {
   const response = await apiClient.get<ApiResponse<BudgetResponse>>(
     '/api/user/roulette/budget'
+  );
+  return response.data.data;
+}
+
+export async function getStatus(): Promise<RouletteStatusResponse> {
+  const response = await apiClient.get<ApiResponse<RouletteStatusResponse>>(
+    '/api/user/roulette/status'
   );
   return response.data.data;
 }
