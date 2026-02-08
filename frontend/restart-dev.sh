@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "🔄 프론트엔드 개발 서버를 재시작합니다..."
+echo "기존 프로세스를 종료하고 다시 시작해주세요:"
+echo ""
+echo "터미널에서:"
+echo "1. Ctrl+C로 현재 실행 중인 'npm run dev' 종료"
+echo "2. npm run dev 다시 실행"
+echo ""
+echo "환경변수가 변경되었습니다:"
+echo "✅ VITE_API_BASE_URL=http://localhost:8080"
+echo ""
+echo "변경사항이 적용되면 다시 상품 구매를 시도해주세요!"

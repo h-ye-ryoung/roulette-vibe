@@ -21,7 +21,11 @@
       "Skill(ccpp:verify)",
       "Skill(ccpp:review)",
       "Skill(ccpp:plan)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(lsof:*)",
+      "Bash(psql:*)",
+      "Bash(docker exec:*)",
+      "Bash(pkill:*)"
     ]
   }
 }
