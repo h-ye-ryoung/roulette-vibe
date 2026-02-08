@@ -17,7 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, TrendingUp, TrendingDown, RotateCcw } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Undo2 } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { FullScreenLoading } from '@/components/LoadingSpinner';
 
@@ -186,7 +186,8 @@ function PointItemCard({ item }: PointItemCardProps) {
   const daysLeft = getDaysUntilExpiry(item.expiresAt);
 
   // 타입별 아이콘
-  const TypeIcon = item.type === 'EARNED' ? TrendingUp : item.type === 'USED' ? TrendingDown : RotateCcw;
+  // EARNED: 획득 (룰렛), USED: 사용 (상품 구매), REFUND: 환불 (주문 취소)
+  const TypeIcon = item.type === 'EARNED' ? TrendingUp : item.type === 'USED' ? TrendingDown : Undo2;
 
   return (
     <div
@@ -225,7 +226,7 @@ function PointItemCard({ item }: PointItemCardProps) {
               <div className="flex items-center gap-1">
                 <Clock className="w-3 h-3 text-gray-400" />
                 <span className={`text-xs ${isExpired ? 'text-gray-400 line-through' : 'text-gray-500'}`}>
-                  {format(new Date(item.expiresAt), 'M/d', { locale: ko })}
+                  {format(new Date(item.expiresAt), 'M/d', { locale: ko })} 만료 예정
                 </span>
               </div>
             </div>

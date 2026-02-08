@@ -20,7 +20,8 @@
       "Skill(ccpp:frontend)",
       "Skill(ccpp:verify)",
       "Skill(ccpp:review)",
-      "Skill(ccpp:plan)"
+      "Skill(ccpp:plan)",
+      "Bash(git commit:*)"
     ]
   }
 }
