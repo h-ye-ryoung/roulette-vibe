@@ -1,8 +1,8 @@
 # 작업 인계 문서
 
 **날짜**: 2026-02-08
-**세션**: 8차 세션
-**마지막 작업**: 사용자 웹 프론트엔드 - 로그인 & 룰렛 페이지 구현 완료
+**세션**: 8차 세션 (계속)
+**마지막 작업**: 사용자 웹 - 룰렛 포인트 정확도 수정 & UI 개선 완료
 
 ---
 
@@ -18,13 +18,16 @@
   - `/api/admin/**` → permitAll (인증 불필요)
   - `/api/user/**` → authenticated (세션 인증 필요)
   - ADMIN_NICKNAMES 환경변수 제거
+- [x] **룰렛 포인트 100p 단위 수정** ✨ NEW
+  - `Random.nextInt(1, 11) * 100` 적용
+  - 화살표 위치와 당첨 금액 완벽 일치
 - [x] CORS 설정 (allowedOriginPatterns 사용)
 - [x] Render 배포 (https://roulette-backend-upmn.onrender.com)
 - [x] GitHub Actions CI/CD 구축
 - [x] Swagger API 문서화
 - [x] 사용자 API 구현
   - [x] 인증 API (`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`)
-  - [x] 룰렛 API (`POST /api/user/roulette/spin`, `GET /api/user/roulette/budget`)
+  - [x] 룰렛 API (`POST /api/user/roulette/spin`, `GET /api/user/roulette/status`, `GET /api/user/roulette/budget`)
 - [x] 어드민 API 전체 구현
   - [x] 대시보드, 예산, 상품 CRUD, 주문 관리, 룰렛 관리
 
@@ -40,7 +43,7 @@
 - [x] 대시보드, 예산 관리, 상품 관리, 주문 관리 페이지 구현
 - [x] Vercel 배포 완료 (https://roulette-admin.vercel.app/)
 
-### 사용자 웹 프론트엔드 ✨ NEW
+### 사용자 웹 프론트엔드 ✨ 대폭 업데이트
 - [x] **환경설정 완료**
   - Vite + React 18 + TypeScript
   - TanStack Query + React Router v6
@@ -51,17 +54,21 @@
   - 폴더 구조: api, components, contexts, hooks, lib, pages, types
 
 - [x] **공통 컴포넌트**
-  - AppLayout: Header + Content + BottomNav
+  - AppLayout: Header + Content + BottomNav (중앙 정렬)
   - Header: 페이지 제목 + 로그아웃 (sticky, backdrop-blur)
   - BottomNav: 4개 탭 네비게이션 (홈, 포인트, 상품, 주문)
   - LoadingSpinner: 3가지 타입 (전체 화면, 기본, 버튼 내)
   - UI 컴포넌트: Button, Input, Card, Label, Progress, Dialog
 
-- [x] **로그인 페이지** (`/login`)
-  - 닉네임 입력 폼
-  - 자동 회원가입/로그인 (없는 닉네임이면 자동 생성)
-  - 입력 검증 (빈 값, 50자 제한)
-  - 에러 로깅 (콘솔)
+- [x] **로그인 페이지** (`/login`) - Purple-Pink 테마
+  - 유리모피즘 카드 (bg-white/80 backdrop-blur)
+  - 큰 이모지 (🎰) 상단 중앙
+  - 그라디언트 타이틀
+  - 닉네임 입력 폼 (h-12, 편한 터치)
+  - 자동 회원가입/로그인
+  - ButtonLoading 애니메이션
+  - 하단 그라디언트 바
+  - 안내 텍스트
 
 - [x] **룰렛 페이지** (`/`) - Stripe 스타일
   - 닉네임 환영 메시지 표시
@@ -69,8 +76,16 @@
   - **룰렛 휠 (10개 섹션)**
     - 100p, 200p, 300p, 400p, 500p, 600p, 700p, 800p, 900p, 1000p
     - 회전 애니메이션 (3초, 반시계방향)
-    - 화살표 위치와 당첨 숫자 정확히 일치
+    - 화살표 위치와 당첨 숫자 정확히 일치 ✅
+  - **오늘 참여 이력 카드** ✨ NEW
+    - 참여 완료 시 표시 (✅ + 획득 포인트)
+    - 간결한 디자인 (p-3, rounded-lg)
   - 참여 버튼 (그라디언트, 로딩 애니메이션)
+  - **서버 기반 참여 상태 관리** ✨ NEW
+    - `GET /api/user/roulette/status` 연동
+    - 새로고침해도 상태 유지
+  - **잔여 예산 표시** ✨ NEW
+    - 버튼 아래 작은 회색 텍스트
   - 1일 1회 제한 (ALREADY_PARTICIPATED 처리)
   - 당첨 결과 모달
   - 예산 소진 처리
@@ -84,21 +99,23 @@
   - AuthContext: 세션 상태 관리
   - `/api/auth/login` - 닉네임 로그인
   - `/api/user/roulette/spin` - 룰렛 참여
+  - `/api/user/roulette/status` - 참여 상태 조회 ✨ NEW
   - `/api/user/roulette/budget` - 예산 조회
 
 - [x] **빌드 성공**
-  - 번들 크기: 385.19 KB (gzip: 125.70 kB)
+  - 번들 크기: 386.97 KB (gzip: 126.13 kB)
   - 개발 서버: http://localhost:5173/
 
 ### 문서화
 - [x] CLAUDE.md 업데이트 (Role 제거 반영)
-- [x] PROMPT.md 업데이트 (세션 8 기록)
+- [x] PROMPT.md 업데이트 (세션 8 전체 기록)
+- [x] HANDOFF.md 업데이트 (이 파일)
 
 ---
 
 ## 진행 중인 작업
 
-**없음** - 룰렛 페이지까지 완료
+**없음** - 룰렛 페이지 모든 기능 완료
 
 ---
 
@@ -187,9 +204,13 @@
 ## 주의사항
 
 ### 백엔드
+- ⚠️ **룰렛 포인트 로직** ✨ 수정됨
+  - `Random.nextInt(1, 11) * 100` - 100p 단위만 반환
+  - 이제 UI와 백엔드 완벽 동기화
+
 - ⚠️ **Role 시스템 완전 제거됨**
   - User 엔티티에 role 컬럼 없음
-  - **데이터베이스 스키마 업데이트 필요**: `ALTER TABLE users DROP COLUMN IF EXISTS role;`
+  - 데이터베이스 스키마도 업데이트 완료
   - 어드민 API는 인증 불필요 (permitAll)
   - 사용자 API는 세션 인증 필요 (authenticated)
 
@@ -203,10 +224,19 @@
   - 배포: `https://*.vercel.app`
 
 ### 사용자 웹 프론트엔드
+- ⚠️ **레이아웃 중앙 정렬** ✨ NEW
+  - `min-h-[calc(100vh-7.5rem)]` - 상단바/하단바 제외한 높이
+  - `flex items-center justify-center` - 중앙 정렬
+
 - ⚠️ **룰렛 회전 로직**
   - 반시계방향 회전: `targetAngle = -(targetIndex * sectionAngle)`
   - 상단 화살표 기준으로 당첨 섹션 정렬
   - 섹션 내 랜덤 오프셋으로 자연스러운 효과
+
+- ⚠️ **룰렛 상태 관리** ✨ NEW
+  - `GET /api/user/roulette/status` 사용
+  - 서버 기반 참여 여부 확인 (로컬 state 제거)
+  - 새로고침해도 상태 유지
 
 - ⚠️ **로딩 애니메이션**
   - 전체 화면: `<FullScreenLoading />`
@@ -237,39 +267,35 @@
 
 ## 알려진 이슈
 
-### 🔴 데이터베이스 스키마 불일치
-**증상**: 새로운 닉네임으로 로그인 시 `INTERNAL_ERROR`
+### ✅ 해결됨: 데이터베이스 스키마 불일치
+~~**증상**: 새로운 닉네임으로 로그인 시 `INTERNAL_ERROR`~~
 
-**원인**: User 엔티티에서 role 필드를 제거했지만, 데이터베이스에는 role 컬럼이 남아있음
+~~**원인**: User 엔티티에서 role 필드를 제거했지만, 데이터베이스에는 role 컬럼이 남아있음~~
 
-**해결**:
-1. Neon PostgreSQL 콘솔 접속
-2. SQL 실행:
-   ```sql
-   ALTER TABLE users DROP COLUMN IF EXISTS role;
-   ```
+**해결**: Neon PostgreSQL에서 role 컬럼 제거 완료
 
 ---
 
 ## 관련 파일
 
 ### 백엔드
+- `backend/src/main/kotlin/com/roulette/domain/roulette/RouletteService.kt` - 100p 단위 로직
 - `backend/src/main/kotlin/com/roulette/domain/user/User.kt` - role 필드 제거됨
 - `backend/src/main/kotlin/com/roulette/auth/AuthService.kt` - role 로직 제거
 - `backend/src/main/kotlin/com/roulette/config/SecurityConfig.kt` - admin permitAll
-- `backend/src/main/kotlin/com/roulette/config/AppProperties.kt` - adminNicknames 제거
+- `backend/src/test/kotlin/com/roulette/ConcurrencyTest.kt` - role 관련 코드 제거
 
 ### 사용자 웹
-- `frontend/src/App.tsx` - 라우팅 설정 (4개 페이지)
+- `frontend/src/App.tsx` - 라우팅 설정 (5개 페이지)
 - `frontend/src/api/auth.ts` - 인증 API
-- `frontend/src/api/roulette.ts` - 룰렛 API
+- `frontend/src/api/roulette.ts` - 룰렛 API (status 추가)
 - `frontend/src/contexts/AuthContext.tsx` - 세션 상태 관리
-- `frontend/src/pages/LoginPage.tsx` - 로그인 페이지
-- `frontend/src/pages/RoulettePage.tsx` - 룰렛 페이지
+- `frontend/src/pages/LoginPage.tsx` - Purple-Pink 테마 로그인
+- `frontend/src/pages/RoulettePage.tsx` - 룰렛 페이지 (상태 관리 개선)
 - `frontend/src/components/RouletteWheel.tsx` - 룰렛 휠 (10섹션)
 - `frontend/src/components/BudgetCard.tsx` - 예산 카드
 - `frontend/src/components/LoadingSpinner.tsx` - 로딩 애니메이션
-- `frontend/src/components/layout/AppLayout.tsx` - 공통 레이아웃
+- `frontend/src/components/layout/AppLayout.tsx` - 공통 레이아웃 (중앙 정렬)
 - `frontend/src/components/layout/Header.tsx` - 헤더
 - `frontend/src/components/layout/BottomNav.tsx` - 하단 탭 네비게이션
 
@@ -284,28 +310,22 @@
 
 ### Git
 - **브랜치**: `main`
-- **마지막 커밋**: (사용자가 직접 커밋 예정)
+- **마지막 커밋**: `77b7bde` - "frontend: 룰렛 화면 잔여 예산 요구사항 반영"
 - **Unstaged 변경사항**:
-  - `frontend/` (전체 - 새로 생성됨)
-  - `backend/src/main/kotlin/com/roulette/domain/user/User.kt` (role 제거)
-  - `backend/src/main/kotlin/com/roulette/auth/` (role 로직 제거)
-  - `backend/src/main/kotlin/com/roulette/config/` (role 제거)
-  - `admin/src/` (로그인 기능 제거)
   - `docs/PROMPT.md` (세션 8 업데이트)
-  - `docs/HANDOFF.md` (이 파일)
 
 ### 빌드 상태
 - **백엔드**: ✅ 빌드 성공 (Gradle)
 - **어드민**: ✅ 빌드 성공 (575.58 KB)
-- **사용자 웹**: ✅ 빌드 성공 (385.19 KB)
+- **사용자 웹**: ✅ 빌드 성공 (386.97 KB, gzip: 126.13 kB)
 
 ### 배포 상태
 - **백엔드**: ✅ Render (https://roulette-backend-upmn.onrender.com)
-  - ⚠️ **재배포 필요**: role 제거 반영
+  - ✅ 최신 배포 완료 (100p 단위 로직 반영)
 - **어드민**: ✅ Vercel (https://roulette-admin.vercel.app/)
-  - ⚠️ **재배포 필요**: 로그인 제거 반영
+  - ✅ 로그인 제거 반영
 - **사용자 웹**: ⏳ 로컬 개발 중 (http://localhost:5173/)
-  - ❌ 아직 배포 안 됨
+  - ❌ 아직 배포 안 됨 (다음 우선순위)
 - **모바일**: ❌ 아직 구현 안 됨
 
 ### 개발 서버
@@ -340,12 +360,12 @@ HANDOFF.md 확인하고, 사용자 웹을 Vercel에 배포하자.
 
 ## 컨텍스트 정보
 
-- **현재 토큰 사용량**: ~122k / 200k (61%)
+- **현재 토큰 사용량**: ~90k / 200k (45%)
 - **Compact 사용 횟수**: 1회
-- **권장 조치**: 다음 페이지 1-2개 구현 후 새 세션 권장
-- **다음 세션**: 포인트/상품/주문 페이지 구현 + 배포
+- **권장 조치**: 포인트/상품/주문 페이지 구현 가능 (여유 있음)
+- **다음 세션**: 나머지 3개 페이지 구현 + 배포
 
 ---
 
 **작성자**: Claude Sonnet 4.5
-**작성일**: 2026-02-08 07:05 KST
+**작성일**: 2026-02-08 17:40 KST
