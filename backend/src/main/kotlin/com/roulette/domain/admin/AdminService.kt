@@ -292,16 +292,38 @@ class AdminService(
         val userIds = filteredHistories.map { it.userId }.toSet()
         val users = userRepository.findAllById(userIds).associateBy { it.id }
 
+        // PointLedger 조회 (reclaimedAmount = balance)
+        val historyIds = filteredHistories.map { it.id }.toSet()
+        val pointLedgers = historyIds.mapNotNull { historyId ->
+            pointLedgerRepository.findByRouletteHistoryId(historyId)?.let { historyId to it }
+        }.toMap()
+
         val historyItems = filteredHistories.mapNotNull { history ->
             val user = users[history.userId] ?: return@mapNotNull null
-            AdminRouletteHistoryItem.from(history, user.nickname)
+            val pointLedger = pointLedgers[history.id]
+            val reclaimedAmount = pointLedger?.balance ?: 0
+
+            AdminRouletteHistoryItem.from(history, user.nickname, reclaimedAmount)
         }
 
+        // PageInfo 계산
+        val totalPages = if (historyPage.totalElements == 0L) 1 else
+            ((historyPage.totalElements + size - 1) / size).toInt()
+        val hasNext = page < totalPages - 1
+        val hasPrevious = page > 0
+
+        val pageInfo = PageInfo(
+            currentPage = page,
+            totalPages = totalPages,
+            pageSize = size,
+            totalElements = historyPage.totalElements,
+            hasNext = hasNext,
+            hasPrevious = hasPrevious
+        )
+
         return AdminRouletteHistoryResponse(
-            histories = historyItems,
-            page = historyPage.number,
-            size = historyPage.size,
-            totalElements = historyPage.totalElements
+            items = historyItems,
+            pageInfo = pageInfo
         )
     }
 
