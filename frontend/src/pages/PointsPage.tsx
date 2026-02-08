@@ -18,7 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Plus, Minus } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { FullScreenLoading } from '@/components/LoadingSpinner';
 
@@ -115,6 +115,11 @@ export default function PointsPage() {
         <Card className="backdrop-blur-lg bg-white/70 border-white/20 shadow-xl">
           <CardHeader>
             <CardTitle className="text-center text-lg">포인트 내역</CardTitle>
+            {hasExpiringPoints && (
+              <p className="text-center text-sm text-orange-600 font-medium mt-2">
+                7일 내 만료 예정: {balance.expiringPoints.reduce((sum, p) => sum + p.balance, 0).toLocaleString()}p
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             {history && history.items.length > 0 ? (
@@ -187,11 +192,6 @@ function PointItemCard({ item }: PointItemCardProps) {
   const daysLeft = getDaysUntilExpiry(item.expiresAt);
   const isIncrease = isIncreaseType(item.type);  // EARN, REFUND
 
-  // 타입별 아이콘
-  // + 증가: EARN (룰렛 참여), REFUND (포인트 환불)
-  // - 차감: USED (상품 주문), RECLAIMED (포인트 회수)
-  const TypeIcon = isIncrease ? Plus : Minus;
-
   return (
     <div
       className={`
@@ -206,7 +206,6 @@ function PointItemCard({ item }: PointItemCardProps) {
       <div className="flex items-center justify-between">
         {/* 왼쪽: 타입 + 금액 */}
         <div className="flex items-center gap-2 flex-1">
-          <TypeIcon className={`w-4 h-4 ${isExpired ? 'text-gray-400' : typeColor}`} />
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <span className={`text-sm font-medium ${isExpired ? 'text-gray-400' : 'text-gray-700'}`}>

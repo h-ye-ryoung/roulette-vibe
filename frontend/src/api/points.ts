@@ -244,8 +244,8 @@ export function getPointTypeLabel(type: PointType): string {
  */
 export function getPointTypeColor(type: PointType): string {
   const colors: Record<PointType, string> = {
-    EARN: 'text-green-600',      // 증가 (초록)
-    REFUND: 'text-green-600',    // 증가 (초록)
+    EARN: 'text-blue-600',       // 증가 (파랑)
+    REFUND: 'text-blue-600',     // 증가 (파랑)
     USED: 'text-red-600',        // 차감 (빨강)
     RECLAIMED: 'text-red-600',   // 차감 (빨강)
   };
