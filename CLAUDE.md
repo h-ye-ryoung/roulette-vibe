@@ -281,6 +281,36 @@
 | `local` (기본) | Docker PostgreSQL 16 | 로컬 개발 |
 | `prod` | Neon PostgreSQL | 배포 |
 
+### 프론트엔드 개발 시 백엔드 API 연동 규칙 (필수)
+
+- **로컬 프론트엔드는 배포된 백엔드 API를 사용한다.**
+- 로컬에서 백엔드 서버를 실행하지 않는다. (백엔드 변경 사항이 없으면)
+- 프론트엔드 개발 시 `.env.local`에 배포된 백엔드 URL 설정:
+  ```
+  VITE_API_BASE_URL=https://roulette-backend-upmn.onrender.com
+  ```
+- **이유**:
+  - 배포된 API는 실제 데이터베이스(Neon)와 연결되어 있음
+  - 로컬 DB 설정 불필요 → 빠른 프론트엔드 개발
+  - 실제 배포 환경과 동일한 조건에서 테스트 가능
+- **예외**: 백엔드 API 변경이 필요한 경우에만 로컬 백엔드 실행
+
+### 환경변수 파일 구조
+
+```
+frontend/
+├─ .env.local          # 로컬 개발 (배포된 백엔드 사용)
+└─ .env.example        # 예시 파일 (Git 추적)
+
+admin/
+├─ .env.local          # 로컬 개발 (배포된 백엔드 사용)
+└─ .env.example        # 예시 파일 (Git 추적)
+
+backend/
+├─ application-local.yml   # 로컬 개발 (Docker DB)
+└─ application-prod.yml    # 배포 (Neon DB, 환경변수 주입)
+```
+
 ---
 
 ## 12. 문서 / 로그 규칙 (핵심)
