@@ -11,7 +11,6 @@ import com.roulette.domain.product.Product
 import com.roulette.domain.product.ProductRepository
 import com.roulette.domain.roulette.RouletteHistoryRepository
 import com.roulette.domain.roulette.RouletteService
-import com.roulette.domain.user.Role
 import com.roulette.domain.user.User
 import com.roulette.domain.user.UserRepository
 import org.junit.jupiter.api.AfterEach
@@ -74,7 +73,7 @@ class ConcurrencyTest {
     @Test
     fun `T-1 동일 유저가 동시에 10번 룰렛 참여 시 1건만 성공해야 한다`() {
         // Given: 유저 생성
-        val user = userRepository.save(User(nickname = "concurrent_user", role = Role.USER))
+        val user = userRepository.save(User(nickname = "concurrent_user"))
         val userId = user.id
 
         // When: 10개의 스레드가 동시에 룰렛 참여 시도
@@ -120,7 +119,7 @@ class ConcurrencyTest {
         // Given: 100명의 유저 생성
         val userCount = 100
         val users = (1..userCount).map { i ->
-            userRepository.save(User(nickname = "user_$i", role = Role.USER))
+            userRepository.save(User(nickname = "user_$i"))
         }
 
         // When: 100명이 동시에 룰렛 참여
@@ -171,7 +170,7 @@ class ConcurrencyTest {
 
         // 테스트할 유저들 생성
         val testUsers = (1..10).map { i ->
-            userRepository.save(User(nickname = "test_user_$i", role = Role.USER))
+            userRepository.save(User(nickname = "test_user_$i"))
         }
 
         // When: 10명이 동시에 룰렛 참여
@@ -210,7 +209,7 @@ class ConcurrencyTest {
     fun `T-4 재고가 1개인 상품에 3명이 동시 주문 시 1건만 성공해야 한다`() {
         // Given: 3명의 유저 생성 및 포인트 지급
         val users = (1..3).map { i ->
-            val user = userRepository.save(User(nickname = "buyer_$i", role = Role.USER))
+            val user = userRepository.save(User(nickname = "buyer_$i"))
             // 각 유저에게 충분한 포인트 지급
             pointLedgerRepository.save(
                 PointLedger(
@@ -275,7 +274,7 @@ class ConcurrencyTest {
     @Test
     fun `T-5 만료된 포인트만 보유한 경우 주문 시 INSUFFICIENT_POINTS 예외가 발생해야 한다`() {
         // Given: 유저 생성 및 만료된 포인트 지급
-        val user = userRepository.save(User(nickname = "expired_user", role = Role.USER))
+        val user = userRepository.save(User(nickname = "expired_user"))
         pointLedgerRepository.save(
             PointLedger(
                 userId = user.id,
@@ -315,7 +314,7 @@ class ConcurrencyTest {
     @Test
     fun `T-6 주문 취소 시 사용된 포인트가 정확히 복원되어야 한다`() {
         // Given: 유저 생성 및 포인트 지급
-        val user = userRepository.save(User(nickname = "refund_user", role = Role.USER))
+        val user = userRepository.save(User(nickname = "refund_user"))
         val pointLedger = pointLedgerRepository.save(
             PointLedger(
                 userId = user.id,
@@ -362,7 +361,7 @@ class ConcurrencyTest {
     @Test
     fun `T-7 룰렛 포인트 일부 사용 후 취소 시 남은 포인트만 회수되어야 한다`() {
         // Given: 유저 생성 및 룰렛 참여
-        val user = userRepository.save(User(nickname = "cancel_user", role = Role.USER))
+        val user = userRepository.save(User(nickname = "cancel_user"))
         val spinResponse = rouletteService.spin(user.id)
         val historyId = spinResponse.historyId
         val originalAmount = spinResponse.amount

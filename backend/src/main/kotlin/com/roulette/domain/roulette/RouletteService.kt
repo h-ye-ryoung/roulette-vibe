@@ -44,8 +44,8 @@ class RouletteService(
             throw AlreadyParticipatedException()
         }
 
-        // 2. 랜덤 금액 결정 (100~1,000p)
-        val amount = Random.nextInt(100, 1001)
+        // 2. 랜덤 금액 결정 (100p 단위: 100, 200, ..., 1000)
+        val amount = Random.nextInt(1, 11) * 100  // 1~10 중 랜덤 선택 후 100 곱하기
 
         // 3. Lazy 예산 리셋: 오늘 날짜로 DailyBudget 조회 또는 생성
         val budget = getOrCreateTodayBudget(today)
