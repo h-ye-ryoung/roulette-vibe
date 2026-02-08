@@ -115,7 +115,7 @@ export default function PointsPage() {
         <Card className="backdrop-blur-lg bg-white/70 border-white/20 shadow-xl">
           <CardHeader>
             <CardTitle className="text-center text-lg">포인트 내역</CardTitle>
-            <p className="text-center text-sm text-orange-600 font-medium mt-2">
+            <p className="text-center text-sm text-purple-600 font-medium mt-2">
               7일 내 만료 예정: {balance?.expiringPoints.reduce((sum, p) => sum + p.balance, 0).toLocaleString() || '0'}p
             </p>
           </CardHeader>
