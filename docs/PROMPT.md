@@ -5484,4 +5484,105 @@ Git 상태 확인 결과:
 ### [02:15] 사용자
 /prompt
 
-<!-- LAST_LOG_CURSOR: 2026-02-09T02:15:00+09:00 -->
+---
+
+## 세션 12 (2026-02-09) - 룰렛 취소 500 에러 디버깅
+
+### [13:45] 사용자
+1. 어드민 - 예산 관리 페이지의 룰렛 참여 내역에서 룰렛 취소 시 백엔드 cancel API 에러가 뜨는 문제 (500 에러)를 해결해줘
+2. '룰렛 취소' 에러 메시지를 간단하게 바꿔줘.
+
+### [13:46] Claude
+두 가지 문제를 해결하겠습니다. 먼저 백엔드 500 에러의 원인을 파악하겠습니다.
+
+### [13:46] 사용자
+해결 시작해
+
+### [13:47] Claude
+(여러 파일 읽기 및 git 로그 확인)
+
+이미 이전 세션에서 UI 수정이 커밋/배포되어 있습니다. 이제 **500 에러**의 근본 원인을 찾기 위해 로컬에서 백엔드를 빌드해보겠습니다.
+
+백엔드 빌드 성공 확인.
+
+배포된 API를 직접 호출해서 500 에러를 재현:
+- admin 로그인 성공
+- 룰렛 히스토리 조회 성공
+- 룰렛 취소 API 호출 → **500 에러 재현 확인**
+
+### [13:48] 사용자
+테스트하지 말고 왜 룰렛 참여 취소 처리가 되는지만 간단히 확인해. Failed to load resource: the server responded with a status of 500 ()
+
+### [13:49] Claude
+500 에러 원인을 파악했습니다.
+
+## 🔍 문제 원인
+
+**배포된 DB에 `pending_point_recovery` 테이블이 없습니다.**
+
+### 증거:
+1. V6 마이그레이션 파일은 `backend/src/main/resources/db/migration/V6__create_pending_point_recovery.sql`에 존재
+2. 하지만 **Flyway를 사용하지 않음** (build.gradle.kts에 없음)
+3. `application-prod.yml`에서 `ddl-auto: update` 사용 중
+4. AdminService.cancelRoulette()가 `pendingPointRecoveryRepository.save()`를 호출
+5. 테이블이 없어서 DB 에러 → 500 Internal Error
+
+### 히브네이트 `ddl-auto: update`의 한계:
+- 새 테이블은 **자동으로 생성되지 않음** (엔티티가 처음 사용될 때만)
+- 외래 키 제약조건도 자동으로 추가되지 않음
+
+## 💡 해결 방법
+
+**1. 수동 DB 마이그레이션 실행 (추천)**
+
+Neon 콘솔에서 직접 SQL 실행:
+
+```sql
+-- V6 마이그레이션 실행
+CREATE TABLE IF NOT EXISTS pending_point_recovery (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    roulette_history_id BIGINT NOT NULL,
+    amount_to_recover INT NOT NULL CHECK (amount_to_recover >= 0),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    cancelled_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_recovery_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_recovery_roulette FOREIGN KEY (roulette_history_id) REFERENCES roulette_history(id),
+    CONSTRAINT chk_recovery_status CHECK (status IN ('PENDING', 'COMPLETED'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_status ON pending_point_recovery(user_id, status);
+
+-- PointType enum에 RECOVERY_DEDUCTION 추가
+ALTER TABLE point_ledger DROP CONSTRAINT IF EXISTS point_ledger_type_check;
+ALTER TABLE point_ledger ADD CONSTRAINT point_ledger_type_check
+  CHECK (type IN ('EARN', 'REFUND', 'USED', 'RECLAIMED', 'RECOVERY_DEDUCTION'));
+```
+
+**2. 에러 메시지 간소화**
+
+프론트엔드 BudgetPage.tsx 이미 수정 완료:
+```typescript
+const errorMsg = error.response?.data?.error?.message
+  || error.message
+  || '룰렛 취소에 실패했습니다';
+setErrorMessage(`취소 실패: ${errorMsg}`);
+```
+
+---
+
+## 🚀 다음 액션
+
+1. **Neon 콘솔 접속** → SQL Editor에서 위 SQL 실행
+2. 실행 후 룰렛 취소 버튼 다시 테스트
+3. 정상 작동 확인
+
+### [13:50] 사용자
+/usage
+/prompt
+
+<!-- LAST_LOG_CURSOR: 2026-02-09T13:50:00+09:00 -->

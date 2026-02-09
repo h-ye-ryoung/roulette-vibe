@@ -241,12 +241,15 @@ function PointItemCard({ item }: PointItemCardProps) {
   const daysLeft = getDaysUntilExpiry(item.expiresAt);
   const isIncrease = isIncreaseType(item.type);  // EARN, REFUND
 
+  // 차감 타입은 만료일 표시 안 함
+  const isDeduction = !isIncrease;  // USED, RECLAIMED, RECOVERY_DEDUCTION
+
   return (
     <div
       className={`
         p-3 rounded-lg border transition-all
         ${
-          isExpired
+          isExpired && !isDeduction
             ? 'bg-gray-50/50 border-gray-200 opacity-50'
             : 'bg-gradient-to-r from-purple-50/30 to-pink-50/30 border-purple-100/50'
         }
@@ -257,10 +260,10 @@ function PointItemCard({ item }: PointItemCardProps) {
         <div className="flex items-center gap-2 flex-1">
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className={`text-sm font-medium ${isExpired ? 'text-gray-400' : 'text-gray-700'}`}>
+              <span className={`text-sm font-medium ${isExpired && !isDeduction ? 'text-gray-400' : 'text-gray-700'}`}>
                 {typeLabel}
               </span>
-              <span className={`text-base font-bold ${isExpired ? 'text-gray-400' : typeColor}`}>
+              <span className={`text-base font-bold ${isExpired && !isDeduction ? 'text-gray-400' : typeColor}`}>
                 {isIncrease ? '+' : '-'}
                 {Math.abs(item.amount).toLocaleString()}p
               </span>
@@ -269,36 +272,42 @@ function PointItemCard({ item }: PointItemCardProps) {
               <p className="text-xs text-gray-500">
                 {format(new Date(item.issuedAt), 'M월 d일 HH:mm', { locale: ko })}
               </p>
-              <span className="text-gray-300">•</span>
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3 text-gray-400" />
-                <span className={`text-xs ${isExpired ? 'text-gray-400 line-through' : 'text-gray-500'}`}>
-                  {format(new Date(item.expiresAt), 'M/d', { locale: ko })} 만료 예정
-                </span>
-              </div>
+              {!isDeduction && (
+                <>
+                  <span className="text-gray-300">•</span>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                    <span className={`text-xs ${isExpired ? 'text-gray-400 line-through' : 'text-gray-500'}`}>
+                      {format(new Date(item.expiresAt), 'M/d', { locale: ko })} 만료 예정
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* 오른쪽: 상태 배지 */}
-        <div className="flex items-center gap-2">
-          {isExpired ? (
-            <Badge variant="secondary" className="text-xs px-2 py-0.5">
-              만료
-            </Badge>
-          ) : isExpiringSoon ? (
-            <Badge
-              variant="outline"
-              className="text-xs px-2 py-0.5 border-orange-300 text-orange-700 bg-orange-50"
-            >
-              D-{daysLeft}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-xs px-2 py-0.5 border-green-300 text-green-700 bg-green-50">
-              유효
-            </Badge>
-          )}
-        </div>
+        {/* 오른쪽: 상태 배지 (증가 타입만) */}
+        {!isDeduction && (
+          <div className="flex items-center gap-2">
+            {isExpired ? (
+              <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                만료
+              </Badge>
+            ) : isExpiringSoon ? (
+              <Badge
+                variant="outline"
+                className="text-xs px-2 py-0.5 border-orange-300 text-orange-700 bg-orange-50"
+              >
+                D-{daysLeft}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 border-green-300 text-green-700 bg-green-50">
+                유효
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

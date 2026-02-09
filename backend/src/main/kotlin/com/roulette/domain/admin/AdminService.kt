@@ -257,6 +257,21 @@ class AdminService(
             totalRefunded += usage.usedAmount
         }
 
+        // REFUND 타입 PointLedger 레코드 생성 (포인트 내역에 환불 표시)
+        if (totalRefunded > 0) {
+            val now = java.time.LocalDateTime.now()
+            pointLedgerRepository.save(
+                com.roulette.domain.point.PointLedger(
+                    userId = order.userId,
+                    amount = totalRefunded,
+                    balance = totalRefunded,
+                    type = com.roulette.domain.point.PointType.REFUND,
+                    issuedAt = now,
+                    expiresAt = now.plusDays(30)
+                )
+            )
+        }
+
         // Product 재고 복원
         productRepository.incrementStock(order.productId)
 

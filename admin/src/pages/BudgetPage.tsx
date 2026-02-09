@@ -69,13 +69,8 @@ export default function BudgetPage() {
 
   const cancelMutation = useMutation({
     mutationFn: cancelRoulette,
-    onSuccess: (data) => {
-      console.log('Cancel success:', data);
-      const response = data.data;
-      const message = response.pendingRecoveryAmount > 0
-        ? `룰렛 참여가 취소되었습니다. 회수: ${response.reclaimedAmount}p, 회수 예정: ${response.pendingRecoveryAmount}p`
-        : `룰렛 참여가 취소되었습니다. 회수: ${response.reclaimedAmount}p`;
-      setSuccessMessage(message);
+    onSuccess: () => {
+      setSuccessMessage('참여를 취소하였습니다.');
       setErrorMessage('');
       queryClient.invalidateQueries({ queryKey: ['roulette-history'] });
       queryClient.invalidateQueries({ queryKey: ['budget'] });
