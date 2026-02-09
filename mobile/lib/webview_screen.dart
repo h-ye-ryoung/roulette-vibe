@@ -25,8 +25,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
-      ..clearCache()  // 캐시 클리어
-      ..clearLocalStorage()  // 로컬 스토리지 클리어
       ..addJavaScriptChannel(
         'FlutterConsole',
         onMessageReceived: (JavaScriptMessage message) {
@@ -71,6 +69,32 @@ class _WebViewScreenState extends State<WebViewScreen> {
                 console.warn = function(...args) {
                   originalWarn.apply(console, args);
                   window.FlutterConsole.postMessage('[WARN] ' + args.join(' '));
+                };
+
+                // XMLHttpRequest 인터셉터 (axios용 - 중요!)
+                const originalXHROpen = XMLHttpRequest.prototype.open;
+                const originalXHRSend = XMLHttpRequest.prototype.send;
+
+                XMLHttpRequest.prototype.open = function(method, url) {
+                  this._url = url;
+                  this._method = method;
+                  window.FlutterConsole.postMessage('[XHR] ' + method + ' ' + url);
+                  return originalXHROpen.apply(this, arguments);
+                };
+
+                XMLHttpRequest.prototype.send = function(body) {
+                  this.addEventListener('load', function() {
+                    window.FlutterConsole.postMessage('[XHR SUCCESS] ' + this._method + ' ' + this._url + ' - ' + this.status);
+                    window.FlutterConsole.postMessage('[XHR RESPONSE] ' + this.responseText.substring(0, 200));
+                    // 로그인 성공 시 쿠키 확인
+                    if (this._url.includes('/login') && this.status === 200) {
+                      window.FlutterConsole.postMessage('[COOKIES] ' + document.cookie);
+                    }
+                  });
+                  this.addEventListener('error', function() {
+                    window.FlutterConsole.postMessage('[XHR ERROR] ' + this._method + ' ' + this._url);
+                  });
+                  return originalXHRSend.apply(this, arguments);
                 };
 
                 // Fetch API 에러 감지

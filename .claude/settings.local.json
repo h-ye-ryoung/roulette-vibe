@@ -37,7 +37,8 @@
       "Bash(flutter doctor:*)",
       "Bash(xcrun simctl:*)",
       "Bash(flutter run:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(flutter clean:*)"
     ]
   }
 }
