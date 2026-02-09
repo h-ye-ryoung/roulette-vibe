@@ -25,6 +25,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
+      ..clearCache()  // 캐시 클리어
+      ..clearLocalStorage()  // 로컬 스토리지 클리어
       ..addJavaScriptChannel(
         'FlutterConsole',
         onMessageReceived: (JavaScriptMessage message) {
