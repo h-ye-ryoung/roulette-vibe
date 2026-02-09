@@ -35,17 +35,20 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
+            print('🌐 [WebView] Page started: $url');
             setState(() {
               _isLoading = true;
               _errorMessage = null;
             });
           },
           onPageFinished: (String url) {
+            print('✅ [WebView] Page finished: $url');
             setState(() {
               _isLoading = false;
             });
 
             // JavaScript 콘솔 로그를 Flutter로 전달
+            print('📝 [WebView] Injecting console logger...');
             _controller.runJavaScript('''
               (function() {
                 // 기존 console 메서드 오버라이드
@@ -88,6 +91,10 @@ class _WebViewScreenState extends State<WebViewScreen> {
             ''');
           },
           onWebResourceError: (WebResourceError error) {
+            print('❌ [WebView] Error: ${error.description}');
+            print('   Error code: ${error.errorCode}');
+            print('   Error type: ${error.errorType}');
+            print('   URL: ${error.url}');
             setState(() {
               _isLoading = false;
               _errorMessage = error.description;
@@ -100,6 +107,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
         ),
       )
       ..loadRequest(Uri.parse(widget.url));
+
+    print('🚀 [WebView] Loading URL: ${widget.url}');
   }
 
   Future<bool> _handleBackButton() async {
