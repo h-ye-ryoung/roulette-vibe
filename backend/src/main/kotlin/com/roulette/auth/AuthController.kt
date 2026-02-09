@@ -30,7 +30,9 @@ class AuthController(
         session: HttpSession
     ): ResponseEntity<ApiResponse<LoginResponse>> {
         val response = authService.login(request.nickname, session)
-        return ResponseEntity.ok(ApiResponse.success(response))
+        // WebView 쿠키 이슈 대응: 세션 ID를 응답에 포함
+        val responseWithSession = response.copy(sessionId = session.id)
+        return ResponseEntity.ok(ApiResponse.success(responseWithSession))
     }
 
     @Operation(
@@ -58,7 +60,8 @@ class AuthController(
             ApiResponse.success(
                 LoginResponse(
                     id = userInfo.id,
-                    nickname = userInfo.nickname
+                    nickname = userInfo.nickname,
+                    sessionId = session.id
                 )
             )
         )

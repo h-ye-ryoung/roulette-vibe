@@ -12,7 +12,8 @@ data class LoginRequest(
 
 data class LoginResponse(
     val id: Long,
-    val nickname: String
+    val nickname: String,
+    val sessionId: String? = null
 )
 
 data class SessionUser(
