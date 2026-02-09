@@ -69,18 +69,28 @@ export default function BudgetPage() {
 
   const cancelMutation = useMutation({
     mutationFn: cancelRoulette,
-    onSuccess: () => {
-      setSuccessMessage('룰렛 참여가 취소되었습니다');
+    onSuccess: (data) => {
+      console.log('Cancel success:', data);
+      const response = data.data;
+      const message = response.pendingRecoveryAmount > 0
+        ? `룰렛 참여가 취소되었습니다. 회수: ${response.reclaimedAmount}p, 회수 예정: ${response.pendingRecoveryAmount}p`
+        : `룰렛 참여가 취소되었습니다. 회수: ${response.reclaimedAmount}p`;
+      setSuccessMessage(message);
       setErrorMessage('');
       queryClient.invalidateQueries({ queryKey: ['roulette-history'] });
       queryClient.invalidateQueries({ queryKey: ['budget'] });
       setCancelDialogOpen(false);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(''), 5000);
     },
-    onError: (error: Error) => {
-      setErrorMessage(error.message || '룰렛 취소에 실패했습니다');
+    onError: (error: any) => {
+      console.error('Cancel error:', error);
+      const errorMsg = error.response?.data?.error?.message
+        || error.message
+        || '룰렛 취소에 실패했습니다';
+      setErrorMessage(`취소 실패: ${errorMsg}`);
       setSuccessMessage('');
-      setTimeout(() => setErrorMessage(''), 3000);
+      setCancelDialogOpen(false);
+      setTimeout(() => setErrorMessage(''), 5000);
     },
   });
 
@@ -256,7 +266,6 @@ export default function BudgetPage() {
                     <TableHead>ID</TableHead>
                     <TableHead>사용자명</TableHead>
                     <TableHead>지급 포인트</TableHead>
-                    <TableHead>남은 포인트</TableHead>
                     <TableHead>날짜</TableHead>
                     <TableHead>상태</TableHead>
                     <TableHead>액션</TableHead>
@@ -268,7 +277,6 @@ export default function BudgetPage() {
                       <TableCell>{item.historyId}</TableCell>
                       <TableCell>{item.userName}</TableCell>
                       <TableCell>{item.originalAmount.toLocaleString()}p</TableCell>
-                      <TableCell>{item.reclaimedAmount.toLocaleString()}p</TableCell>
                       <TableCell>{item.spinDate}</TableCell>
                       <TableCell>
                         <Badge variant={item.status === 'ACTIVE' ? 'success' : 'secondary'}>
@@ -329,7 +337,9 @@ export default function BudgetPage() {
           <DialogHeader>
             <DialogTitle>룰렛 참여 취소</DialogTitle>
             <DialogDescription>
-              이 룰렛 참여를 취소하시겠습니까? 남은 포인트만 회수됩니다.
+              이 룰렛 참여를 취소하시겠습니까? 현재 잔액이 있으면 전액 회수되고,
+              이미 사용된 포인트는 회수 예정 포인트로 기록됩니다.
+              회수 예정 포인트는 다음 룰렛 당첨 시 자동으로 차감됩니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
