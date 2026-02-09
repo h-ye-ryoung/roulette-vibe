@@ -7,6 +7,8 @@ import com.roulette.domain.budget.DailyBudget
 import com.roulette.domain.budget.DailyBudgetRepository
 import com.roulette.domain.point.PointLedger
 import com.roulette.domain.point.PointLedgerRepository
+import com.roulette.domain.point.PointType
+import com.roulette.domain.recovery.PendingPointRecoveryRepository
 import com.roulette.domain.roulette.dto.RouletteHistoryDto
 import com.roulette.domain.roulette.dto.RouletteStatusResponse
 import com.roulette.domain.roulette.dto.SpinResponse
@@ -23,6 +25,7 @@ class RouletteService(
     private val rouletteHistoryRepository: RouletteHistoryRepository,
     private val dailyBudgetRepository: DailyBudgetRepository,
     private val pointLedgerRepository: PointLedgerRepository,
+    private val pendingPointRecoveryRepository: PendingPointRecoveryRepository,
     private val appProperties: AppProperties,
     private val entityManager: EntityManager
 ) {
@@ -74,7 +77,22 @@ class RouletteService(
             throw AlreadyParticipatedException()
         }
 
-        // 6. 포인트 지급 (유효기간 = 지급일 + 30일)
+        // 6. 회수 예정 포인트 조회 및 차감 (신규)
+        val pendingRecoveries = pendingPointRecoveryRepository.findPendingByUserIdForUpdate(userId)
+
+        var totalRecovered = 0
+        var remainingAmount = amount
+
+        for (recovery in pendingRecoveries) {
+            if (remainingAmount <= 0) break
+            val recovered = recovery.deduct(remainingAmount)
+            totalRecovered += recovered
+            remainingAmount -= recovered
+        }
+
+        val actualGrantedAmount = amount - totalRecovered
+
+        // 7. PointLedger 생성 (balance = 실제 지급액)
         val now = LocalDateTime.now()
         val expiresAt = now.plusDays(30)
         pointLedgerRepository.save(
@@ -82,22 +100,42 @@ class RouletteService(
                 userId = userId,
                 rouletteHistoryId = history.id,
                 amount = amount,
-                balance = amount,
-                type = com.roulette.domain.point.PointType.EARN,
+                balance = actualGrantedAmount,  // 회수 차감 후 금액
+                type = PointType.EARN,
                 issuedAt = now,
                 expiresAt = expiresAt
             )
         )
 
-        // 7. 차감 후 잔여 예산 조회
+        // 8. 회수 차감 내역 기록 (신규)
+        if (totalRecovered > 0) {
+            pointLedgerRepository.save(
+                PointLedger(
+                    userId = userId,
+                    amount = -totalRecovered,
+                    balance = 0,
+                    type = PointType.RECOVERY_DEDUCTION,
+                    issuedAt = now,
+                    expiresAt = expiresAt
+                )
+            )
+        }
+
+        // 9. 차감 후 잔여 예산 조회
         val updatedBudget = dailyBudgetRepository.findByBudgetDate(today)
             ?: throw IllegalStateException("Budget not found after decrement")
 
         return SpinResponse(
             historyId = history.id,
             amount = amount,
+            actualGrantedAmount = actualGrantedAmount,  // 신규 필드
+            recoveredAmount = totalRecovered,  // 신규 필드
             remainingBudget = updatedBudget.remaining,
-            message = "${amount}p 당첨!"
+            message = if (totalRecovered > 0) {
+                "${amount}p 당첨! (회수 예정 ${totalRecovered}p 차감, 실제 지급 ${actualGrantedAmount}p)"
+            } else {
+                "${amount}p 당첨!"
+            }
         )
     }
 

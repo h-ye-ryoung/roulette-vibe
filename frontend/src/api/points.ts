@@ -17,8 +17,9 @@ type ISODateTimeString = string & { readonly __brand: 'ISODateTime' };
  * - REFUND: 주문 취소로 환불받은 포인트 (증가, +)
  * - USED: 상품 구매로 사용한 포인트 (차감, -)
  * - RECLAIMED: 룰렛 취소로 회수된 포인트 (차감, -)
+ * - RECOVERY_DEDUCTION: 회수 예정 포인트 차감 (차감, -)
  */
-type PointType = 'EARN' | 'REFUND' | 'USED' | 'RECLAIMED';
+type PointType = 'EARN' | 'REFUND' | 'USED' | 'RECLAIMED' | 'RECOVERY_DEDUCTION';
 
 /**
  * Utility Type: Point Status (Computed)
@@ -50,6 +51,24 @@ export interface ExpiringPoint {
   readonly id: number;
   readonly balance: number;
   readonly expiresAt: ISODateTimeString;
+}
+
+/**
+ * 회수 예정 포인트 항목
+ */
+export interface PendingRecoveryItem {
+  readonly id: number;
+  readonly rouletteHistoryId: number;
+  readonly amountToRecover: number;
+  readonly cancelledAt: ISODateTimeString;
+}
+
+/**
+ * 회수 예정 포인트 응답
+ */
+export interface PendingRecoveryResponse {
+  readonly totalAmount: number;
+  readonly items: readonly PendingRecoveryItem[];
 }
 
 /**
@@ -208,6 +227,18 @@ export async function getPointHistory(
   return response.data;
 }
 
+/**
+ * 회수 예정 포인트 조회
+ * - 룰렛 취소로 회수하지 못한 포인트 목록
+ * - 다음 포인트 지급 시 자동 차감
+ */
+export async function getPendingRecovery(): Promise<ApiResponse<PendingRecoveryResponse>> {
+  const response = await apiClient.get<ApiResponse<PendingRecoveryResponse>>(
+    '/api/user/points/pending-recovery'
+  );
+  return response.data;
+}
+
 // ============================================
 // 🔧 Utility Functions
 // ============================================
@@ -235,6 +266,7 @@ export function getPointTypeLabel(type: PointType): string {
     REFUND: '포인트 환불',
     USED: '상품 주문',
     RECLAIMED: '포인트 회수',
+    RECOVERY_DEDUCTION: '회수 예정 차감',
   };
   return labels[type];
 }
@@ -247,6 +279,7 @@ export function getPointTypeColor(type: PointType): string {
     EARN: 'text-blue-600',       // 증가 (파랑)
     REFUND: 'text-blue-600',     // 증가 (파랑)
     USED: 'text-red-600',        // 차감 (빨강)
+    RECOVERY_DEDUCTION: 'text-orange-600',  // 회수 예정 차감 (주황)
     RECLAIMED: 'text-red-600',   // 차감 (빨강)
   };
   return colors[type];

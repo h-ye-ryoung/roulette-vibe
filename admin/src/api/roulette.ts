@@ -28,6 +28,19 @@ export interface RouletteHistoryParams {
   date?: string; // YYYY-MM-DD
 }
 
+export interface CancelRouletteResponse {
+  historyId: number;
+  userId: number;
+  userName: string;
+  originalAmount: number;
+  reclaimedAmount: number;
+  alreadyUsedAmount: number;
+  budgetRestored: boolean;
+  pendingRecoveryAmount: number;
+  pendingRecoveryId: number | null;
+  message: string;
+}
+
 export async function getRouletteHistory(
   params: RouletteHistoryParams = {}
 ): Promise<ApiResponse<RouletteHistoryPage>> {
@@ -47,8 +60,8 @@ export async function getRouletteHistory(
   return response.data;
 }
 
-export async function cancelRoulette(historyId: number): Promise<ApiResponse<void>> {
-  const response = await apiClient.post<ApiResponse<void>>(
+export async function cancelRoulette(historyId: number): Promise<ApiResponse<CancelRouletteResponse>> {
+  const response = await apiClient.post<ApiResponse<CancelRouletteResponse>>(
     `/api/admin/roulette/${historyId}/cancel`
   );
   return response.data;

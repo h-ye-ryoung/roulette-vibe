@@ -1,8 +1,12 @@
 import { apiClient, type ApiResponse } from './client';
 
 export interface SpinResponse {
+  historyId: number;
   amount: number;
+  actualGrantedAmount: number;
+  recoveredAmount: number;
   remainingBudget: number;
+  message: string;
 }
 
 export interface BudgetResponse {

@@ -4,6 +4,7 @@ import com.roulette.auth.SessionUser
 import com.roulette.common.ApiResponse
 import com.roulette.domain.point.dto.BalanceResponse
 import com.roulette.domain.point.dto.ExpiringPointsResponse
+import com.roulette.domain.point.dto.PendingRecoveryResponse
 import com.roulette.domain.point.dto.PointHistoryResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -98,6 +99,32 @@ class PointController(
         @Parameter(description = "페이지 크기") @RequestParam(defaultValue = "20") size: Int
     ): ApiResponse<PointHistoryResponse> {
         val response = pointService.getHistory(sessionUser.id, page, size)
+        return ApiResponse.success(response)
+    }
+
+    @Operation(
+        summary = "회수 예정 포인트 조회",
+        description = """
+            룰렛 취소로 인해 회수하지 못한 포인트 목록을 조회합니다.
+
+            회수 예정 포인트란?
+            - 룰렛 취소 시 이미 사용된 포인트가 있어 전액 회수하지 못한 경우
+            - 부족분을 "회수 예정 포인트"로 기록하고, 다음 포인트 지급 시 자동 차감
+
+            불변 원칙:
+            - 회수 예정 포인트가 있으면 사용 가능 잔액 = 0 (주문 불가)
+            - 다음 룰렛 참여 시 자동으로 차감되어 정산됨
+
+            응답 정보:
+            - totalAmount: 회수 예정 포인트 총액
+            - items: 회수 예정 포인트 상세 목록 (룰렛 ID, 금액, 취소 일시)
+        """
+    )
+    @GetMapping("/pending-recovery")
+    fun getPendingRecovery(
+        @AuthenticationPrincipal sessionUser: SessionUser
+    ): ApiResponse<PendingRecoveryResponse> {
+        val response = pointService.getPendingRecovery(sessionUser.id)
         return ApiResponse.success(response)
     }
 }

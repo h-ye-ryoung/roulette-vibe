@@ -10,6 +10,8 @@ import com.roulette.domain.order.OrderRepository
 import com.roulette.domain.point.PointLedgerRepository
 import com.roulette.domain.product.Product
 import com.roulette.domain.product.ProductRepository
+import com.roulette.domain.recovery.PendingPointRecovery
+import com.roulette.domain.recovery.PendingPointRecoveryRepository
 import com.roulette.domain.product.dto.ProductDetailResponse
 import com.roulette.domain.product.dto.ProductItem
 import com.roulette.domain.product.dto.ProductListResponse
@@ -32,6 +34,7 @@ class AdminService(
     private val orderPointUsageRepository: OrderPointUsageRepository,
     private val pointLedgerRepository: PointLedgerRepository,
     private val userRepository: UserRepository,
+    private val pendingPointRecoveryRepository: PendingPointRecoveryRepository,
     @Value("\${app.daily-budget-default:100000}") private val defaultDailyBudget: Int
 ) {
 
@@ -350,17 +353,17 @@ class AdminService(
             ?: throw IllegalStateException("PointLedger not found for roulette history")
 
         val originalAmount = rouletteHistory.amount
-        val reclaimedAmount = pointLedger.balance
-        val alreadyUsedAmount = originalAmount - reclaimedAmount
+        val currentBalance = pointLedger.balance
+        val shortfall = originalAmount - currentBalance  // 회수 부족분
 
-        // 남은 포인트만 회수 (balance를 0으로)
+        // 1. 현재 남은 포인트 전액 회수
         pointLedger.balance = 0
 
-        // RECLAIMED 타입 레코드 생성 (포인트 회수 내역 표시용)
-        if (reclaimedAmount > 0) {
+        // 2. RECLAIMED 타입 레코드 생성 (기존 로직 유지)
+        if (currentBalance > 0) {
             val reclaimedPointLedger = com.roulette.domain.point.PointLedger(
                 userId = rouletteHistory.userId,
-                amount = -reclaimedAmount,  // 음수로 저장 (회수)
+                amount = -currentBalance,  // 음수로 저장 (회수)
                 balance = 0,  // 회수 내역은 balance 0
                 type = com.roulette.domain.point.PointType.RECLAIMED,
                 issuedAt = java.time.LocalDateTime.now(),
@@ -369,7 +372,21 @@ class AdminService(
             pointLedgerRepository.save(reclaimedPointLedger)
         }
 
-        // PDP-5: 당일 취소면 예산 복구
+        // 3. 부족분이 있으면 PendingPointRecovery 생성 (신규)
+        var pendingRecoveryId: Long? = null
+        if (shortfall > 0) {
+            val pendingRecovery = pendingPointRecoveryRepository.save(
+                PendingPointRecovery(
+                    userId = rouletteHistory.userId,
+                    rouletteHistoryId = historyId,
+                    amountToRecover = shortfall,
+                    cancelledAt = java.time.LocalDateTime.now()
+                )
+            )
+            pendingRecoveryId = pendingRecovery.id
+        }
+
+        // 4. PDP-5: 당일 취소면 예산 복구 (기존 로직 유지)
         val spinDate = rouletteHistory.spinDate
         val cancelDate = LocalDate.now(kstZone)
 
@@ -392,13 +409,17 @@ class AdminService(
             userId = rouletteHistory.userId,
             userName = user.nickname,
             originalAmount = originalAmount,
-            reclaimedAmount = reclaimedAmount,
-            alreadyUsedAmount = alreadyUsedAmount,
+            reclaimedAmount = currentBalance,
+            alreadyUsedAmount = originalAmount - currentBalance,
             budgetRestored = budgetRestored,
-            message = if (budgetRestored) {
-                "Roulette cancelled, ${reclaimedAmount}p reclaimed, budget restored"
+            pendingRecoveryAmount = shortfall,  // 신규 필드
+            pendingRecoveryId = pendingRecoveryId,  // 신규 필드
+            message = if (shortfall > 0) {
+                "Roulette cancelled, ${currentBalance}p reclaimed, ${shortfall}p pending recovery"
+            } else if (budgetRestored) {
+                "Roulette cancelled, ${currentBalance}p reclaimed, budget restored"
             } else {
-                "Roulette cancelled, ${reclaimedAmount}p reclaimed (budget not restored - not same day)"
+                "Roulette cancelled, ${currentBalance}p reclaimed"
             }
         )
     }

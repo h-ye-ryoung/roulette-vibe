@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   getBalance,
   getPointHistory,
+  getPendingRecovery,
   withNavigation,
   getPointTypeLabel,
   getPointTypeColor,
@@ -33,6 +34,12 @@ export default function PointsPage() {
     queryFn: getBalance,
   });
 
+  // 회수 예정 포인트 조회
+  const { data: pendingRecoveryData, isLoading: pendingRecoveryLoading } = useQuery({
+    queryKey: ['pending-recovery'],
+    queryFn: getPendingRecovery,
+  });
+
   // 포인트 내역 조회
   const { data: historyData, isLoading: historyLoading } = useQuery({
     queryKey: ['points-history', currentPage],
@@ -40,15 +47,17 @@ export default function PointsPage() {
   });
 
   const balance = balanceData?.data;
+  const pendingRecovery = pendingRecoveryData?.data;
   const historyResponse = historyData?.data;
   const history = historyResponse ? withNavigation(historyResponse) : null;
 
   // 로딩 상태
-  if (balanceLoading || historyLoading) {
+  if (balanceLoading || historyLoading || pendingRecoveryLoading) {
     return <FullScreenLoading message="포인트 정보를 불러오는 중..." />;
   }
 
   const hasExpiringPoints = balance && balance.expiringPoints.length > 0;
+  const hasPendingRecovery = pendingRecovery && pendingRecovery.totalAmount > 0;
 
   return (
     <AppLayout title="💰 내 포인트">
@@ -72,11 +81,53 @@ export default function PointsPage() {
           <CardContent className="space-y-4">
             <div className="text-center">
               <div className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                {balance?.totalBalance.toLocaleString() || 0}p
+                {hasPendingRecovery ? '0' : balance?.totalBalance.toLocaleString() || 0}p
               </div>
+              {hasPendingRecovery && (
+                <p className="text-sm text-red-500 mt-2 font-medium">회수 예정으로 인해 사용 불가</p>
+              )}
             </div>
           </CardContent>
         </Card>
+
+        {/* 회수 예정 포인트 경고 배너 */}
+        {hasPendingRecovery && (
+          <div className="bg-gradient-to-r from-orange-100 to-red-100 rounded-lg p-4 border border-orange-200">
+            <div className="flex items-start gap-2">
+              <span className="text-2xl">⚠️</span>
+              <div className="flex-1 space-y-2">
+                <p className="font-bold text-gray-800">회수 예정 포인트: {pendingRecovery.totalAmount.toLocaleString()}p</p>
+                <p className="text-sm text-gray-600">
+                  취소된 지급 건으로 인해 적립 예정 포인트에서 차감됩니다.
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  다음 룰렛 참여 시 자동으로 차감되어 정산됩니다.
+                </p>
+                {/* 회수 예정 상세 */}
+                {pendingRecovery.items.length > 0 && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-gray-700 hover:text-gray-900">
+                      회수 예정 상세 ({pendingRecovery.items.length}건) 👇
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      {pendingRecovery.items.map((item) => (
+                        <div key={item.id} className="border-l-4 border-orange-400 pl-3 py-1">
+                          <p className="text-sm text-gray-700">
+                            룰렛 #{item.rouletteHistoryId} 취소 건
+                          </p>
+                          <p className="font-bold text-orange-600">{item.amountToRecover.toLocaleString()}p</p>
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(item.cancelledAt), 'M월 d일 HH:mm', { locale: ko })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 만료 예정 알림 배너 */}
         {hasExpiringPoints && (

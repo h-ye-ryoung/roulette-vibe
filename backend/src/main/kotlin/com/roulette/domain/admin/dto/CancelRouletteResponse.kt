@@ -8,5 +8,7 @@ data class CancelRouletteResponse(
     val reclaimedAmount: Int,
     val alreadyUsedAmount: Int,
     val budgetRestored: Boolean,
+    val pendingRecoveryAmount: Int,  // 회수 예정 포인트 금액
+    val pendingRecoveryId: Long?,    // 회수 예정 레코드 ID (없으면 null)
     val message: String
 )

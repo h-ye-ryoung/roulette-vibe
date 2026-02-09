@@ -1,6 +1,7 @@
 package com.roulette.domain.order
 
 import com.roulette.common.InsufficientPointsException
+import com.roulette.common.PendingRecoveryExistsException
 import com.roulette.common.ProductNotFoundException
 import com.roulette.common.ProductOutOfStockException
 import com.roulette.domain.order.dto.CreateOrderResponse
@@ -8,6 +9,7 @@ import com.roulette.domain.order.dto.OrderItemResponse
 import com.roulette.domain.order.dto.OrderListResponse
 import com.roulette.domain.point.PointLedgerRepository
 import com.roulette.domain.product.ProductRepository
+import com.roulette.domain.recovery.PendingPointRecoveryRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -20,7 +22,8 @@ class OrderService(
     private val orderRepository: OrderRepository,
     private val orderPointUsageRepository: OrderPointUsageRepository,
     private val productRepository: ProductRepository,
-    private val pointLedgerRepository: PointLedgerRepository
+    private val pointLedgerRepository: PointLedgerRepository,
+    private val pendingPointRecoveryRepository: PendingPointRecoveryRepository
 ) {
 
     /**
@@ -37,6 +40,12 @@ class OrderService(
     @Transactional
     fun createOrder(userId: Long, productId: Long): CreateOrderResponse {
         val now = LocalDateTime.now()
+
+        // 0. 회수 예정 포인트가 있으면 주문 불가 (방어적 체크)
+        val pendingAmount = pendingPointRecoveryRepository.sumPendingAmount(userId)
+        if (pendingAmount > 0) {
+            throw PendingRecoveryExistsException()
+        }
 
         // 1. Product 조회
         val product = productRepository.findById(productId)

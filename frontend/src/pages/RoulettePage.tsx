@@ -120,6 +120,18 @@ export default function RoulettePage() {
           </div>
         )}
 
+        {/* 회수 차감 알림 */}
+        {spinResult && spinResult.recoveredAmount > 0 && showResultModal && !errorMessage && (
+          <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-4 border border-blue-200">
+            <p className="text-sm text-gray-700">
+              💡 회수 예정 포인트 <strong>{spinResult.recoveredAmount.toLocaleString()}p</strong>가 차감되었습니다.
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              당첨 금액: {spinResult.amount.toLocaleString()}p → 실제 지급: {spinResult.actualGrantedAmount.toLocaleString()}p
+            </p>
+          </div>
+        )}
+
         {/* 룰렛 휠 */}
         <div className="py-4">
           <RouletteWheel
@@ -172,13 +184,23 @@ export default function RoulettePage() {
               {errorMessage ? (
                 <span className="text-gray-700">{errorMessage}</span>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                     {spinResult?.amount.toLocaleString()}p
                   </div>
                   <div className="text-gray-700">
                     포인트를 획득했습니다!
                   </div>
+                  {spinResult?.recoveredAmount !== undefined && spinResult.recoveredAmount > 0 && (
+                    <div className="bg-blue-50 rounded-lg p-3 text-sm space-y-1">
+                      <p className="text-blue-700 font-medium">
+                        💡 회수 예정 {spinResult.recoveredAmount.toLocaleString()}p 차감
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        실제 지급: {spinResult.actualGrantedAmount.toLocaleString()}p
+                      </p>
+                    </div>
+                  )}
                   {spinResult?.remainingBudget !== undefined && (
                     <div className="text-sm text-gray-500 pt-2">
                       남은 예산: {spinResult.remainingBudget.toLocaleString()}p

@@ -23,6 +23,11 @@ class InsufficientPointsException : BusinessException(
     message = "Not enough points"
 )
 
+class PendingRecoveryExistsException : BusinessException(
+    code = "PENDING_RECOVERY_EXISTS",
+    message = "Cannot make an order while pending point recovery exists. Please wait until next roulette spin."
+)
+
 class ProductNotFoundException : BusinessException(
     code = "PRODUCT_NOT_FOUND",
     message = "Product not found",
