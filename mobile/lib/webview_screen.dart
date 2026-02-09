@@ -11,7 +11,7 @@ class WebViewScreen extends StatefulWidget {
 }
 
 class _WebViewScreenState extends State<WebViewScreen> {
-  late final WebViewController _controller;
+  WebViewController? _controller;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -94,42 +94,44 @@ class _WebViewScreenState extends State<WebViewScreen> {
                 };
 
                 XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
-                  // 저장된 세션 ID가 있으면 Cookie 헤더에 추가
-                  if (header.toLowerCase() === 'cookie') {
-                    const sessionId = localStorage.getItem('SESSION_ID');
-                    if (sessionId) {
-                      value = value + '; JSESSIONID=' + sessionId;
-                      window.FlutterConsole.postMessage('[ADDING SESSION] ' + sessionId);
-                    }
-                  }
                   return originalSetRequestHeader.call(this, header, value);
+                };
+
+                // 모든 요청에 세션 쿠키 자동 추가
+                const addSessionCookie = function(xhr) {
+                  const sessionId = localStorage.getItem('SESSION_ID');
+                  if (sessionId) {
+                    xhr.setRequestHeader('Cookie', 'JSESSIONID=' + sessionId);
+                    window.FlutterConsole.postMessage('[ADDING SESSION] JSESSIONID=' + sessionId.substring(0, 10) + '...');
+                  }
                 };
 
                 XMLHttpRequest.prototype.send = function(body) {
                   const xhr = this;
+
+                  // 요청 전에 세션 쿠키 추가 (로그인 제외)
+                  if (!this._url.includes('/login')) {
+                    addSessionCookie(this);
+                  }
+
                   this.addEventListener('load', function() {
                     window.FlutterConsole.postMessage('[XHR SUCCESS] ' + this._method + ' ' + this._url + ' - ' + this.status);
                     window.FlutterConsole.postMessage('[XHR RESPONSE] ' + this.responseText.substring(0, 200));
 
-                    // 로그인 성공 시 Set-Cookie 헤더 확인 및 수동 저장
+                    // 로그인 성공 시 응답 본문에서 세션 ID 추출
                     if (this._url.includes('/login') && this.status === 200) {
-                      const setCookie = xhr.getResponseHeader('Set-Cookie');
-                      window.FlutterConsole.postMessage('[SET-COOKIE HEADER] ' + setCookie);
-                      window.FlutterConsole.postMessage('[COOKIES BEFORE] ' + document.cookie);
-
-                      // Set-Cookie 헤더에서 세션 추출하여 localStorage에 저장
-                      if (setCookie) {
-                        try {
-                          const sessionMatch = setCookie.match(/JSESSIONID=([^;]+)/);
-                          if (sessionMatch) {
-                            localStorage.setItem('SESSION_ID', sessionMatch[1]);
-                            window.FlutterConsole.postMessage('[SESSION SAVED] ' + sessionMatch[1]);
-                          }
-                        } catch (e) {
-                          window.FlutterConsole.postMessage('[COOKIE ERROR] ' + e.message);
+                      try {
+                        const response = JSON.parse(this.responseText);
+                        if (response.success && response.data && response.data.sessionId) {
+                          const sessionId = response.data.sessionId;
+                          localStorage.setItem('SESSION_ID', sessionId);
+                          window.FlutterConsole.postMessage('[SESSION SAVED FROM RESPONSE] ' + sessionId.substring(0, 10) + '...');
+                        } else {
+                          window.FlutterConsole.postMessage('[NO SESSION IN RESPONSE] ' + this.responseText.substring(0, 100));
                         }
+                      } catch (e) {
+                        window.FlutterConsole.postMessage('[SESSION PARSE ERROR] ' + e.message);
                       }
-                      window.FlutterConsole.postMessage('[COOKIES AFTER] ' + document.cookie);
                     }
                   });
                   this.addEventListener('error', function() {
@@ -159,11 +161,21 @@ class _WebViewScreenState extends State<WebViewScreen> {
                     window.FlutterConsole.postMessage('[AXIOS FOUND] Adding interceptor');
                     window.axios.interceptors.request.use(function(config) {
                       const sessionId = localStorage.getItem('SESSION_ID');
-                      if (sessionId) {
+                      if (sessionId && !config.url.includes('/login')) {
                         config.headers['Cookie'] = 'JSESSIONID=' + sessionId;
-                        window.FlutterConsole.postMessage('[AXIOS REQUEST] Adding session');
+                        window.FlutterConsole.postMessage('[AXIOS REQUEST] Adding session: ' + sessionId.substring(0, 10) + '...');
                       }
                       return config;
+                    });
+
+                    // 로그인 응답 인터셉터 - 응답에서 세션 ID 추출
+                    window.axios.interceptors.response.use(function(response) {
+                      if (response.config.url.includes('/login') && response.data.success && response.data.data.sessionId) {
+                        const sessionId = response.data.data.sessionId;
+                        localStorage.setItem('SESSION_ID', sessionId);
+                        window.FlutterConsole.postMessage('[AXIOS SESSION SAVED] ' + sessionId.substring(0, 10) + '...');
+                      }
+                      return response;
                     });
                     clearInterval(checkAxios);
                   }
@@ -198,16 +210,17 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<bool> _handleBackButton() async {
-    final canGoBack = await _controller.canGoBack();
+    if (_controller == null) return true;
+    final canGoBack = await _controller!.canGoBack();
     if (canGoBack) {
-      await _controller.goBack();
+      await _controller!.goBack();
       return false; // 앱 종료 방지
     }
     return true; // 앱 종료 허용
   }
 
   void _reload() {
-    _controller.reload();
+    _controller?.reload();
     setState(() {
       _errorMessage = null;
     });
@@ -231,9 +244,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
           child: Stack(
             children: [
               // WebView
-              if (_errorMessage == null)
-                WebViewWidget(controller: _controller)
-              else
+              if (_errorMessage == null && _controller != null)
+                WebViewWidget(controller: _controller!)
+              else if (_errorMessage != null)
                 _buildErrorView(),
 
               // 로딩 인디케이터
