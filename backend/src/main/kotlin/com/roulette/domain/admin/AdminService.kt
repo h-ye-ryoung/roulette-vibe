@@ -247,29 +247,28 @@ class AdminService(
         // OrderPointUsage 조회 (사용된 포인트 내역)
         val usages = orderPointUsageRepository.findAllByOrderId(orderId)
 
-        // PointLedger balance 복원 (PDP-4: 원래 포인트 복원)
+        // PDP-4: 원래 포인트 복원 = REFUND 레코드 생성 (원래 만료일 사용)
+        // balance 수정 대신 새 REFUND 레코드를 생성하여 불변성 보장
         var totalRefunded = 0
+        val now = java.time.LocalDateTime.now()
+
         for (usage in usages) {
-            val pointLedger = pointLedgerRepository.findById(usage.pointLedgerId)
+            val originalLedger = pointLedgerRepository.findById(usage.pointLedgerId)
                 .orElseThrow { IllegalStateException("PointLedger not found") }
 
-            pointLedger.restore(usage.usedAmount)
-            totalRefunded += usage.usedAmount
-        }
-
-        // REFUND 타입 PointLedger 레코드 생성 (포인트 내역에 환불 표시)
-        if (totalRefunded > 0) {
-            val now = java.time.LocalDateTime.now()
+            // REFUND 레코드 생성 (원래 포인트의 만료일 그대로 사용)
             pointLedgerRepository.save(
                 com.roulette.domain.point.PointLedger(
                     userId = order.userId,
-                    amount = totalRefunded,
-                    balance = totalRefunded,
+                    amount = usage.usedAmount,
+                    balance = usage.usedAmount,
                     type = com.roulette.domain.point.PointType.REFUND,
                     issuedAt = now,
-                    expiresAt = now.plusDays(30)
+                    expiresAt = originalLedger.expiresAt  // 원래 포인트의 만료일
                 )
             )
+
+            totalRefunded += usage.usedAmount
         }
 
         // Product 재고 복원

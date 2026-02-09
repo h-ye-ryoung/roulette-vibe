@@ -50,8 +50,4 @@ class PointLedger(
         balance -= actualDeduct
         return actualDeduct
     }
-
-    fun restore(restoreAmount: Int) {
-        balance = minOf(balance + restoreAmount, amount)
-    }
 }
