@@ -309,19 +309,25 @@ class ConcurrencyTest {
     }
 
     /**
-     * T-6: 주문 취소 후 포인트 잔액 복원 → balance 정확히 복원
+     * T-6: 주문 취소 후 포인트 잔액 복원
+     *
+     * 수정된 로직: balance 수정 대신 REFUND 레코드 생성
+     * - 원래 EARN 레코드의 balance는 그대로 유지 (400)
+     * - REFUND 레코드 생성 (amount=600, balance=600, 원래 만료일 사용)
+     * - 총 사용 가능 포인트 = 400 + 600 = 1000
      */
     @Test
     fun `T-6 주문 취소 시 사용된 포인트가 정확히 복원되어야 한다`() {
         // Given: 유저 생성 및 포인트 지급
         val user = userRepository.save(User(nickname = "refund_user"))
+        val expiresAt = LocalDateTime.now().plusDays(30)
         val pointLedger = pointLedgerRepository.save(
             PointLedger(
                 userId = user.id,
                 amount = 1000,
                 balance = 1000,
                 type = PointType.EARN,
-                expiresAt = LocalDateTime.now().plusDays(30)
+                expiresAt = expiresAt
             )
         )
 
@@ -341,14 +347,26 @@ class ConcurrencyTest {
 
         // 주문 후 잔액 확인
         val afterOrder = pointLedgerRepository.findById(pointLedger.id!!).get()
-        assertEquals(400, afterOrder.balance, "주문 후 잔액은 400이어야 함")
+        assertEquals(400, afterOrder.balance, "주문 후 EARN 레코드 잔액은 400이어야 함")
 
         // When: 주문 취소 (AdminService 사용)
         adminService.cancelOrder(orderId)
 
-        // Then: 잔액 복원 확인
-        val afterCancel = pointLedgerRepository.findById(pointLedger.id!!).get()
-        assertEquals(1000, afterCancel.balance, "취소 후 잔액이 1000으로 복원되어야 함")
+        // Then: EARN 레코드는 그대로, REFUND 레코드 생성 확인
+        val earnAfterCancel = pointLedgerRepository.findById(pointLedger.id!!).get()
+        assertEquals(400, earnAfterCancel.balance, "취소 후에도 EARN 레코드 잔액은 400 유지 (수정 안 함)")
+
+        // REFUND 레코드 확인
+        val allLedgers = pointLedgerRepository.findAllByUserId(user.id)
+        val refundLedger = allLedgers.find { it.type == PointType.REFUND }
+        assertNotNull(refundLedger, "REFUND 레코드가 생성되어야 함")
+        assertEquals(600, refundLedger!!.amount, "REFUND 금액은 600이어야 함")
+        assertEquals(600, refundLedger.balance, "REFUND 잔액은 600이어야 함")
+        assertEquals(expiresAt.toLocalDate(), refundLedger.expiresAt.toLocalDate(), "REFUND 만료일은 원래 EARN의 만료일과 같아야 함")
+
+        // 총 사용 가능 포인트 확인 (EARN 400 + REFUND 600)
+        val totalBalance = pointLedgerRepository.sumAvailableBalance(user.id, LocalDateTime.now())
+        assertEquals(1000, totalBalance, "총 사용 가능 포인트는 1000이어야 함")
 
         // 재고 복원 확인 (10 → 9 → 10)
         val updatedProduct = productRepository.findById(product.id).get()
