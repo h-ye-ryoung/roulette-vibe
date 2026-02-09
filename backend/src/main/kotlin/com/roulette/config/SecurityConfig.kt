@@ -14,7 +14,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
-    private val sessionAuthenticationFilter: SessionAuthenticationFilter
+    private val sessionAuthenticationFilter: SessionAuthenticationFilter,
+    private val customSessionFilter: CustomSessionFilter
 ) {
 
     @Bean
@@ -30,12 +31,14 @@ class SecurityConfig(
                         )
                         allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         allowedHeaders = listOf("*")
+                        exposedHeaders = listOf("X-Session-ID")  // WebView에서 읽을 수 있도록
                         allowCredentials = true
                         maxAge = 3600
                     }
                 }
             }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) }
+            .addFilterBefore(customSessionFilter, SessionAuthenticationFilter::class.java)
             .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .authorizeHttpRequests { auth ->
                 auth
