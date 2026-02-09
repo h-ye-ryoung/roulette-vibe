@@ -21,7 +21,16 @@ class _WebViewScreenState extends State<WebViewScreen> {
     _initializeWebView();
   }
 
-  void _initializeWebView() {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+  }
+
+  void _initializeWebView() async {
+    // iOS WebView 쿠키 활성화
+    final cookieManager = WebViewCookieManager();
+    await cookieManager.clearCookies(); // 기존 쿠키 클리어
+
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
@@ -75,6 +84,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
                 const originalXHROpen = XMLHttpRequest.prototype.open;
                 const originalXHRSend = XMLHttpRequest.prototype.send;
 
+                const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+
                 XMLHttpRequest.prototype.open = function(method, url) {
                   this._url = url;
                   this._method = method;
@@ -82,13 +93,43 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   return originalXHROpen.apply(this, arguments);
                 };
 
+                XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+                  // 저장된 세션 ID가 있으면 Cookie 헤더에 추가
+                  if (header.toLowerCase() === 'cookie') {
+                    const sessionId = localStorage.getItem('SESSION_ID');
+                    if (sessionId) {
+                      value = value + '; JSESSIONID=' + sessionId;
+                      window.FlutterConsole.postMessage('[ADDING SESSION] ' + sessionId);
+                    }
+                  }
+                  return originalSetRequestHeader.call(this, header, value);
+                };
+
                 XMLHttpRequest.prototype.send = function(body) {
+                  const xhr = this;
                   this.addEventListener('load', function() {
                     window.FlutterConsole.postMessage('[XHR SUCCESS] ' + this._method + ' ' + this._url + ' - ' + this.status);
                     window.FlutterConsole.postMessage('[XHR RESPONSE] ' + this.responseText.substring(0, 200));
-                    // 로그인 성공 시 쿠키 확인
+
+                    // 로그인 성공 시 Set-Cookie 헤더 확인 및 수동 저장
                     if (this._url.includes('/login') && this.status === 200) {
-                      window.FlutterConsole.postMessage('[COOKIES] ' + document.cookie);
+                      const setCookie = xhr.getResponseHeader('Set-Cookie');
+                      window.FlutterConsole.postMessage('[SET-COOKIE HEADER] ' + setCookie);
+                      window.FlutterConsole.postMessage('[COOKIES BEFORE] ' + document.cookie);
+
+                      // Set-Cookie 헤더에서 세션 추출하여 localStorage에 저장
+                      if (setCookie) {
+                        try {
+                          const sessionMatch = setCookie.match(/JSESSIONID=([^;]+)/);
+                          if (sessionMatch) {
+                            localStorage.setItem('SESSION_ID', sessionMatch[1]);
+                            window.FlutterConsole.postMessage('[SESSION SAVED] ' + sessionMatch[1]);
+                          }
+                        } catch (e) {
+                          window.FlutterConsole.postMessage('[COOKIE ERROR] ' + e.message);
+                        }
+                      }
+                      window.FlutterConsole.postMessage('[COOKIES AFTER] ' + document.cookie);
                     }
                   });
                   this.addEventListener('error', function() {
@@ -111,6 +152,25 @@ class _WebViewScreenState extends State<WebViewScreen> {
                       throw error;
                     });
                 };
+
+                // axios가 로드되면 인터셉터 추가
+                const checkAxios = setInterval(function() {
+                  if (window.axios) {
+                    window.FlutterConsole.postMessage('[AXIOS FOUND] Adding interceptor');
+                    window.axios.interceptors.request.use(function(config) {
+                      const sessionId = localStorage.getItem('SESSION_ID');
+                      if (sessionId) {
+                        config.headers['Cookie'] = 'JSESSIONID=' + sessionId;
+                        window.FlutterConsole.postMessage('[AXIOS REQUEST] Adding session');
+                      }
+                      return config;
+                    });
+                    clearInterval(checkAxios);
+                  }
+                }, 100);
+
+                // 10초 후 타임아웃
+                setTimeout(function() { clearInterval(checkAxios); }, 10000);
 
                 window.FlutterConsole.postMessage('[WebView Ready] ' + window.location.href);
               })();
