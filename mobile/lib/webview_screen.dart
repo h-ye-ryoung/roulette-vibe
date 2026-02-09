@@ -58,7 +58,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
             // JavaScript 콘솔 로그를 Flutter로 전달
             print('📝 [WebView] Injecting console logger...');
-            _controller.runJavaScript('''
+            _controller?.runJavaScript('''
               (function() {
                 // 기존 console 메서드 오버라이드
                 const originalLog = console.log;
@@ -97,21 +97,21 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   return originalSetRequestHeader.call(this, header, value);
                 };
 
-                // 모든 요청에 세션 쿠키 자동 추가
-                const addSessionCookie = function(xhr) {
+                // 모든 요청에 세션 ID를 커스텀 헤더로 추가
+                const addSessionHeader = function(xhr) {
                   const sessionId = localStorage.getItem('SESSION_ID');
                   if (sessionId) {
-                    xhr.setRequestHeader('Cookie', 'JSESSIONID=' + sessionId);
-                    window.FlutterConsole.postMessage('[ADDING SESSION] JSESSIONID=' + sessionId.substring(0, 10) + '...');
+                    xhr.setRequestHeader('X-Session-ID', sessionId);
+                    window.FlutterConsole.postMessage('[ADDING SESSION] X-Session-ID=' + sessionId.substring(0, 10) + '...');
                   }
                 };
 
                 XMLHttpRequest.prototype.send = function(body) {
                   const xhr = this;
 
-                  // 요청 전에 세션 쿠키 추가 (로그인 제외)
+                  // 요청 전에 세션 ID 헤더 추가 (로그인 제외)
                   if (!this._url.includes('/login')) {
-                    addSessionCookie(this);
+                    addSessionHeader(this);
                   }
 
                   this.addEventListener('load', function() {
@@ -162,7 +162,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                     window.axios.interceptors.request.use(function(config) {
                       const sessionId = localStorage.getItem('SESSION_ID');
                       if (sessionId && !config.url.includes('/login')) {
-                        config.headers['Cookie'] = 'JSESSIONID=' + sessionId;
+                        config.headers['X-Session-ID'] = sessionId;
                         window.FlutterConsole.postMessage('[AXIOS REQUEST] Adding session: ' + sessionId.substring(0, 10) + '...');
                       }
                       return config;
