@@ -38,12 +38,22 @@ class SessionAuthenticationFilter(
         // 1순위: X-Session-ID 헤더 확인 (WebView용 - DB 토큰)
         val customToken = request.getHeader("X-Session-ID")
         if (customToken != null && customToken.isNotBlank()) {
-            logger.info("📱 [SessionFilter] X-Session-ID detected: ${customToken.take(10)}...")
+            logger.info("📱 [SessionFilter] X-Session-ID detected: FULL=$customToken")
+            logger.info("📱 [SessionFilter] Token length: ${customToken.length}")
+            logger.info("📱 [SessionFilter] Token format check: ${customToken.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))}")
+
+            // DB에 저장된 모든 토큰 출력 (디버깅용)
+            val allTokens = userSessionRepository.findAll()
+            logger.info("🗄️ [SessionFilter] Total tokens in DB: ${allTokens.size}")
+            allTokens.forEach { session ->
+                logger.info("  - Token: ${session.token}, UserId: ${session.userId}, Expires: ${session.expiresAt}, Valid: ${session.isValid()}")
+            }
 
             // DB에서 토큰 조회 (expiresAt > now)
+            logger.info("🔍 [SessionFilter] Searching for token: $customToken")
             val userSession = userSessionRepository.findValidToken(customToken)
             if (userSession != null) {
-                logger.info("🔍 [SessionFilter] Token found in DB: userId=${userSession.userId}, expires=${userSession.expiresAt}")
+                logger.info("✅ [SessionFilter] Token found in DB: userId=${userSession.userId}, expires=${userSession.expiresAt}")
 
                 // 유효성 검증
                 if (userSession.isValid()) {
@@ -69,7 +79,9 @@ class SessionAuthenticationFilter(
                     logger.warn("⏰ [SessionFilter] Token expired: ${customToken.take(10)}...")
                 }
             } else {
-                logger.warn("❌ [SessionFilter] Token not found in DB: ${customToken.take(10)}...")
+                logger.warn("❌ [SessionFilter] Token not found in DB!")
+                logger.warn("❌ [SessionFilter] Searched token: $customToken")
+                logger.warn("❌ [SessionFilter] Check if token exists in DB list above")
             }
         } else {
             logger.info("ℹ️ [SessionFilter] No X-Session-ID header, trying HttpSession...")
