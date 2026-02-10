@@ -83,7 +83,7 @@
 - **Spring Boot 3.5.0** / **Kotlin 2.0.21** / **Java 21 LTS**
 - Build: **Gradle 8.x (Kotlin DSL)** — Wrapper로 관리
 - ORM: **Spring Data JPA** (Hibernate)
-- Auth: **Spring Security** (HTTP 세션 기반, 닉네임 mocking 로그인)
+- Auth: **Spring Security** + **DB 기반 토큰** (웹: HTTP 세션, 모바일: UUID 토큰 / 닉네임 자동 로그인)
 - API 문서: **springdoc-openapi-starter-webmvc-ui** (Swagger UI)
 - 검증: **spring-boot-starter-validation** (Jakarta Validation)
 - 직렬화: **jackson-module-kotlin** + **kotlin-reflect**
@@ -160,6 +160,19 @@
 
 #### 필수 GitHub Secrets
 - `RENDER_DEPLOY_HOOK`: Render 배포 웹훅 URL (수동 설정 필요)
+
+---
+
+## 6.5. 인증 방식 (iOS WebView 쿠키 이슈 대응)
+
+### 듀얼 인증 시스템
+- **웹 브라우저**: HTTP 세션 (JSESSIONID 쿠키)
+- **모바일 WebView**: DB 기반 UUID 토큰 (X-Session-ID 헤더)
+
+### 동작 방식
+1. **로그인**: UUID 토큰 생성 → DB 저장 (30일 유효) → 응답에 sessionId 포함
+2. **인증**: X-Session-ID 헤더 확인 → DB 조회 → SecurityContext 설정
+3. **이유**: iOS WebView는 JavaScript에서 Cookie 헤더 설정 불가 (브라우저 보안 정책)
 
 ---
 
