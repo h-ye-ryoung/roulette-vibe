@@ -97,62 +97,17 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   return originalSetRequestHeader.call(this, header, value);
                 };
 
-                // 모든 요청에 세션 ID를 커스텀 헤더로 추가
-                const addSessionHeader = function(xhr) {
-                  const sessionId = localStorage.getItem('SESSION_ID');
-                  window.FlutterConsole.postMessage('[DEBUG] localStorage.SESSION_ID=' + sessionId);
-                  if (sessionId) {
-                    xhr.setRequestHeader('X-Session-ID', sessionId);
-                    window.FlutterConsole.postMessage('[ADDING SESSION] X-Session-ID(full)=' + sessionId);
-                    window.FlutterConsole.postMessage('[ADDING SESSION] Length=' + sessionId.length + ', Format=' + (sessionId.includes('-') ? 'UUID' : 'RAW'));
-                  } else {
-                    window.FlutterConsole.postMessage('[WARNING] No SESSION_ID in localStorage!');
-                  }
-                };
-
                 XMLHttpRequest.prototype.send = function(body) {
                   const xhr = this;
 
-                  // 요청 전에 세션 ID 헤더 추가 (로그인 제외)
-                  if (!this._url.includes('/login')) {
-                    addSessionHeader(this);
-                  }
+                  // 세션 ID 헤더는 frontend axios 인터셉터에서 처리하므로
+                  // WebView에서는 추가하지 않음 (중복 방지)
 
                   this.addEventListener('load', function() {
                     window.FlutterConsole.postMessage('[XHR SUCCESS] ' + this._method + ' ' + this._url + ' - ' + this.status);
                     window.FlutterConsole.postMessage('[XHR RESPONSE] ' + this.responseText.substring(0, 200));
 
-                    // 로그인 성공 시 응답 본문에서 세션 ID 추출
-                    if (this._url.includes('/login') && this.status === 200) {
-                      try {
-                        window.FlutterConsole.postMessage('[LOGIN] Parsing response...');
-                        const response = JSON.parse(this.responseText);
-                        window.FlutterConsole.postMessage('[LOGIN] response.success=' + response.success);
-                        window.FlutterConsole.postMessage('[LOGIN] response.data=' + JSON.stringify(response.data));
-
-                        if (response.success && response.data && response.data.sessionId) {
-                          const sessionId = response.data.sessionId;
-                          window.FlutterConsole.postMessage('[LOGIN] Extracted sessionId(FULL)=' + sessionId);
-                          window.FlutterConsole.postMessage('[LOGIN] sessionId length=' + sessionId.length);
-                          window.FlutterConsole.postMessage('[LOGIN] sessionId format=' + (sessionId.includes('-') ? 'UUID' : 'RAW'));
-
-                          // localStorage 저장 전 확인
-                          const oldValue = localStorage.getItem('SESSION_ID');
-                          window.FlutterConsole.postMessage('[LOGIN] Old SESSION_ID in localStorage: ' + oldValue);
-
-                          localStorage.setItem('SESSION_ID', sessionId);
-
-                          // localStorage 저장 후 확인
-                          const newValue = localStorage.getItem('SESSION_ID');
-                          window.FlutterConsole.postMessage('[LOGIN] New SESSION_ID in localStorage: ' + newValue);
-                          window.FlutterConsole.postMessage('[LOGIN] Storage verification: ' + (newValue === sessionId ? 'SUCCESS' : 'FAILED'));
-                        } else {
-                          window.FlutterConsole.postMessage('[NO SESSION IN RESPONSE] ' + this.responseText.substring(0, 100));
-                        }
-                      } catch (e) {
-                        window.FlutterConsole.postMessage('[SESSION PARSE ERROR] ' + e.message);
-                      }
-                    }
+                    // 로그인 세션 저장은 frontend axios 인터셉터에서 처리 (중복 방지)
                   });
                   this.addEventListener('error', function() {
                     window.FlutterConsole.postMessage('[XHR ERROR] ' + this._method + ' ' + this._url);
@@ -175,34 +130,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
                     });
                 };
 
-                // axios가 로드되면 인터셉터 추가
-                const checkAxios = setInterval(function() {
-                  if (window.axios) {
-                    window.FlutterConsole.postMessage('[AXIOS FOUND] Adding interceptor');
-                    window.axios.interceptors.request.use(function(config) {
-                      const sessionId = localStorage.getItem('SESSION_ID');
-                      if (sessionId && !config.url.includes('/login')) {
-                        config.headers['X-Session-ID'] = sessionId;
-                        window.FlutterConsole.postMessage('[AXIOS REQUEST] Adding session: ' + sessionId.substring(0, 10) + '...');
-                      }
-                      return config;
-                    });
-
-                    // 로그인 응답 인터셉터 - 응답에서 세션 ID 추출
-                    window.axios.interceptors.response.use(function(response) {
-                      if (response.config.url.includes('/login') && response.data.success && response.data.data.sessionId) {
-                        const sessionId = response.data.data.sessionId;
-                        localStorage.setItem('SESSION_ID', sessionId);
-                        window.FlutterConsole.postMessage('[AXIOS SESSION SAVED] ' + sessionId.substring(0, 10) + '...');
-                      }
-                      return response;
-                    });
-                    clearInterval(checkAxios);
-                  }
-                }, 100);
-
-                // 10초 후 타임아웃
-                setTimeout(function() { clearInterval(checkAxios); }, 10000);
+                // axios 인터셉터는 frontend에서 처리하므로 WebView에서는 제거
+                // (XMLHttpRequest 인터셉터만 사용 - 중복 헤더 방지)
 
                 window.FlutterConsole.postMessage('[WebView Ready] ' + window.location.href);
               })();
@@ -271,11 +200,30 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
               // 로딩 인디케이터
               if (_isLoading)
-                const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF9333EA), // Purple-600
-                    ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        '🎰',
+                        style: TextStyle(fontSize: 64),
+                      ),
+                      const SizedBox(height: 24),
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF9333EA), // Purple-600
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '포인트 룰렛 로딩 중...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
