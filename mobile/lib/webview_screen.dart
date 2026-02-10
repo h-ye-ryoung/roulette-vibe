@@ -100,9 +100,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
                 // 모든 요청에 세션 ID를 커스텀 헤더로 추가
                 const addSessionHeader = function(xhr) {
                   const sessionId = localStorage.getItem('SESSION_ID');
+                  window.FlutterConsole.postMessage('[DEBUG] localStorage.SESSION_ID=' + sessionId);
                   if (sessionId) {
                     xhr.setRequestHeader('X-Session-ID', sessionId);
-                    window.FlutterConsole.postMessage('[ADDING SESSION] X-Session-ID=' + sessionId.substring(0, 10) + '...');
+                    window.FlutterConsole.postMessage('[ADDING SESSION] X-Session-ID(full)=' + sessionId);
+                    window.FlutterConsole.postMessage('[ADDING SESSION] Length=' + sessionId.length + ', Format=' + (sessionId.includes('-') ? 'UUID' : 'RAW'));
+                  } else {
+                    window.FlutterConsole.postMessage('[WARNING] No SESSION_ID in localStorage!');
                   }
                 };
 
@@ -121,11 +125,27 @@ class _WebViewScreenState extends State<WebViewScreen> {
                     // 로그인 성공 시 응답 본문에서 세션 ID 추출
                     if (this._url.includes('/login') && this.status === 200) {
                       try {
+                        window.FlutterConsole.postMessage('[LOGIN] Parsing response...');
                         const response = JSON.parse(this.responseText);
+                        window.FlutterConsole.postMessage('[LOGIN] response.success=' + response.success);
+                        window.FlutterConsole.postMessage('[LOGIN] response.data=' + JSON.stringify(response.data));
+
                         if (response.success && response.data && response.data.sessionId) {
                           const sessionId = response.data.sessionId;
+                          window.FlutterConsole.postMessage('[LOGIN] Extracted sessionId(FULL)=' + sessionId);
+                          window.FlutterConsole.postMessage('[LOGIN] sessionId length=' + sessionId.length);
+                          window.FlutterConsole.postMessage('[LOGIN] sessionId format=' + (sessionId.includes('-') ? 'UUID' : 'RAW'));
+
+                          // localStorage 저장 전 확인
+                          const oldValue = localStorage.getItem('SESSION_ID');
+                          window.FlutterConsole.postMessage('[LOGIN] Old SESSION_ID in localStorage: ' + oldValue);
+
                           localStorage.setItem('SESSION_ID', sessionId);
-                          window.FlutterConsole.postMessage('[SESSION SAVED FROM RESPONSE] ' + sessionId.substring(0, 10) + '...');
+
+                          // localStorage 저장 후 확인
+                          const newValue = localStorage.getItem('SESSION_ID');
+                          window.FlutterConsole.postMessage('[LOGIN] New SESSION_ID in localStorage: ' + newValue);
+                          window.FlutterConsole.postMessage('[LOGIN] Storage verification: ' + (newValue === sessionId ? 'SUCCESS' : 'FAILED'));
                         } else {
                           window.FlutterConsole.postMessage('[NO SESSION IN RESPONSE] ' + this.responseText.substring(0, 100));
                         }
