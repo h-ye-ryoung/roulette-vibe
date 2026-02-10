@@ -14,8 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
-    private val sessionAuthenticationFilter: SessionAuthenticationFilter,
-    private val customSessionFilter: CustomSessionFilter
+    private val sessionAuthenticationFilter: SessionAuthenticationFilter
 ) {
 
     @Bean
@@ -38,7 +37,6 @@ class SecurityConfig(
                 }
             }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) }
-            .addFilterBefore(customSessionFilter, SessionAuthenticationFilter::class.java)
             .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .authorizeHttpRequests { auth ->
                 auth
