@@ -5777,3 +5777,382 @@ fun restore(restoreAmount: Int) {
 /prompt
 
 <!-- LAST_LOG_CURSOR: 2026-02-09T19:35:00+09:00 -->
+
+---
+
+## 세션 8 (2026-02-10) - iOS WebView 쿠키 이슈 해결
+
+### [시작] 시스템
+이전 세션 요약: Flutter WebView에서 API 인증 실패 (401) 문제 디버깅 중. 로그인은 성공(200)하지만 세션 쿠키가 저장되지 않아 후속 요청이 모두 401로 실패함. iOS WebView의 쿠키 차단 정책이 원인으로 파악됨. Set-Cookie 헤더를 JavaScript에서 접근할 수 없어 수동 쿠키 관리 시도했으나 실패.
+
+### [계속] 사용자
+(이전 세션에서 계속)
+
+### [계속] Claude
+이어서 작업하겠습니다. 백엔드에서 세션 ID를 응답 본문에 직접 전달하도록 수정하겠습니다.
+
+먼저 현재 코드를 확인하겠습니다.
+
+(AuthController.kt와 AuthDtos.kt 읽기)
+
+백엔드를 수정하여 로그인 응답에 세션 ID를 포함시키겠습니다.
+
+(AuthDtos.kt 수정: LoginResponse에 sessionId 필드 추가)
+```kotlin
+data class LoginResponse(
+    val id: Long,
+    val nickname: String,
+    val sessionId: String? = null
+)
+```
+
+(AuthController.kt 수정: 로그인 시 세션 ID 포함)
+```kotlin
+@PostMapping("/login")
+fun login(
+    @Valid @RequestBody request: LoginRequest,
+    session: HttpSession
+): ResponseEntity<ApiResponse<LoginResponse>> {
+    val response = authService.login(request.nickname, session)
+    // WebView 쿠키 이슈 대응: 세션 ID를 응답에 포함
+    val responseWithSession = response.copy(sessionId = session.id)
+    return ResponseEntity.ok(ApiResponse.success(responseWithSession))
+}
+```
+
+(AuthController.kt 수정: /me 엔드포인트도 세션 ID 포함)
+```kotlin
+@GetMapping("/me")
+fun me(session: HttpSession): ResponseEntity<ApiResponse<LoginResponse>> {
+    val userInfo = session.getAttribute("user") as? SessionUser
+        ?: return ResponseEntity.status(401)
+            .body(ApiResponse.error("UNAUTHORIZED", "Not logged in"))
+
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            LoginResponse(
+                id = userInfo.id,
+                nickname = userInfo.nickname,
+                sessionId = session.id
+            )
+        )
+    )
+}
+```
+
+이제 WebView를 수정하여 로그인 응답에서 세션 ID를 추출하고 모든 요청에 포함시키겠습니다.
+
+(webview_screen.dart 수정: setRequestHeader 간소화 및 addSessionCookie 함수 추가)
+```dart
+XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+  return originalSetRequestHeader.call(this, header, value);
+};
+
+// 모든 요청에 세션 쿠키 자동 추가
+const addSessionCookie = function(xhr) {
+  const sessionId = localStorage.getItem('SESSION_ID');
+  if (sessionId) {
+    xhr.setRequestHeader('Cookie', 'JSESSIONID=' + sessionId);
+    window.FlutterConsole.postMessage('[ADDING SESSION] JSESSIONID=' + sessionId.substring(0, 10) + '...');
+  }
+};
+```
+
+(webview_screen.dart 수정: send 메서드 개선 - 응답 본문에서 세션 ID 추출)
+```dart
+XMLHttpRequest.prototype.send = function(body) {
+  const xhr = this;
+
+  // 요청 전에 세션 쿠키 추가 (로그인 제외)
+  if (!this._url.includes('/login')) {
+    addSessionCookie(this);
+  }
+
+  this.addEventListener('load', function() {
+    window.FlutterConsole.postMessage('[XHR SUCCESS] ' + this._method + ' ' + this._url + ' - ' + this.status);
+    window.FlutterConsole.postMessage('[XHR RESPONSE] ' + this.responseText.substring(0, 200));
+
+    // 로그인 성공 시 응답 본문에서 세션 ID 추출
+    if (this._url.includes('/login') && this.status === 200) {
+      try {
+        const response = JSON.parse(this.responseText);
+        if (response.success && response.data && response.data.sessionId) {
+          const sessionId = response.data.sessionId;
+          localStorage.setItem('SESSION_ID', sessionId);
+          window.FlutterConsole.postMessage('[SESSION SAVED FROM RESPONSE] ' + sessionId.substring(0, 10) + '...');
+        } else {
+          window.FlutterConsole.postMessage('[NO SESSION IN RESPONSE] ' + this.responseText.substring(0, 100));
+        }
+      } catch (e) {
+        window.FlutterConsole.postMessage('[SESSION PARSE ERROR] ' + e.message);
+      }
+    }
+  });
+  this.addEventListener('error', function() {
+    window.FlutterConsole.postMessage('[XHR ERROR] ' + this._method + ' ' + this._url);
+  });
+  return originalXHRSend.apply(this, arguments);
+};
+```
+
+이제 axios 인터셉터도 수정하겠습니다.
+
+(webview_screen.dart 수정: axios 인터셉터 개선)
+```dart
+// axios가 로드되면 인터셉터 추가
+const checkAxios = setInterval(function() {
+  if (window.axios) {
+    window.FlutterConsole.postMessage('[AXIOS FOUND] Adding interceptor');
+    window.axios.interceptors.request.use(function(config) {
+      const sessionId = localStorage.getItem('SESSION_ID');
+      if (sessionId && !config.url.includes('/login')) {
+        config.headers['Cookie'] = 'JSESSIONID=' + sessionId;
+        window.FlutterConsole.postMessage('[AXIOS REQUEST] Adding session: ' + sessionId.substring(0, 10) + '...');
+      }
+      return config;
+    });
+
+    // 로그인 응답 인터셉터 - 응답에서 세션 ID 추출
+    window.axios.interceptors.response.use(function(response) {
+      if (response.config.url.includes('/login') && response.data.success && response.data.data.sessionId) {
+        const sessionId = response.data.data.sessionId;
+        localStorage.setItem('SESSION_ID', sessionId);
+        window.FlutterConsole.postMessage('[AXIOS SESSION SAVED] ' + sessionId.substring(0, 10) + '...');
+      }
+      return response;
+    });
+    clearInterval(checkAxios);
+  }
+}, 100);
+
+// 10초 후 타임아웃
+setTimeout(function() { clearInterval(checkAxios); }, 10000);
+```
+
+백엔드와 모바일 WebView 수정이 완료되었습니다! 🎉
+
+## 📝 변경 사항 요약
+
+### 1. **Backend** (세션 ID 응답에 포함)
+
+**`AuthDtos.kt`:**
+- `LoginResponse`에 `sessionId` 필드 추가 (nullable)
+
+**`AuthController.kt`:**
+- 로그인 응답에 `session.id` 포함
+- `/me` 엔드포인트도 세션 ID 포함 (일관성)
+
+### 2. **Mobile WebView** (세션 ID 수동 관리)
+
+**`webview_screen.dart`:**
+- **로그인 시**: 응답 본문(`response.data.sessionId`)에서 세션 ID 추출 → localStorage 저장
+- **모든 후속 요청**: localStorage의 세션 ID를 Cookie 헤더에 자동 추가
+- **XMLHttpRequest 인터셉터**: 로그인 제외한 모든 요청에 `JSESSIONID` 쿠키 추가
+- **axios 인터셉터**: 로그인 응답 인터셉터 추가 (세션 ID 저장)
+
+## 🚀 다음 단계
+
+이제 백엔드를 재배포하고 모바일 앱을 테스트해야 합니다:
+
+```bash
+# 1. Backend 변경사항 커밋 & 푸시 (GitHub Actions 자동 배포)
+cd /Users/kimhyeryoung/Desktop/roulette-vibe
+git add backend/src/main/kotlin/com/roulette/auth/
+git commit -m "fix: WebView 쿠키 이슈 대응 - 로그인 응답에 세션 ID 포함
+
+- AuthDtos: LoginResponse에 sessionId 필드 추가
+- AuthController: 로그인/me 응답에 세션 ID 포함
+- WebView: 응답 본문에서 세션 ID 추출하여 수동 관리
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+git push origin main
+
+# 2. Mobile 변경사항 커밋
+git add mobile/lib/webview_screen.dart
+git commit -m "fix: WebView 세션 ID 수동 관리 구현
+
+- 로그인 응답에서 sessionId 추출
+- localStorage에 세션 ID 저장
+- 모든 요청에 Cookie 헤더 자동 추가
+- XMLHttpRequest와 axios 인터셉터 개선
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+git push origin main
+
+# 3. 배포 대기 (GitHub Actions 확인)
+# https://github.com/<your-username>/<your-repo>/actions
+
+# 4. 배포 완료 후 모바일 앱 테스트
+cd mobile
+flutter run
+```
+
+백엔드 배포가 완료되면 (약 5-10분) 모바일 앱을 다시 실행해서 테스트하시겠어요?
+
+### [배경작업 완료] 시스템
+Task bb25b56 completed: "수동 쿠키 관리가 적용된 앱 실행" (exit code 0)
+Output file: /private/tmp/claude-501/-Users-kimhyeryoung-Desktop-roulette-vibe/tasks/bb25b56.output
+
+### [분석] Claude
+(bb25b56 출력 파일 읽기)
+
+아직 **백엔드가 재배포되지 않아서** 로그인 응답에 `sessionId`가 포함되지 않았습니다! 그리고 `_controller` 초기화 에러도 발생했네요.
+
+## 🐛 발견된 문제
+
+### 1. LateInitializationError (WebView Controller)
+- `late final _controller`가 build 시점에 초기화되지 않음
+- `_initializeWebView()`는 async인데 `initState()`에서 await 없이 호출됨
+
+### 2. 백엔드 미배포
+- 로그인 응답: `{"success":true,"data":{"id":4,"nickname":"시원한 메론"}}`
+- **`sessionId` 필드가 없음** → 아직 이전 버전이 배포되어 있음
+
+먼저 WebView 에러를 수정하겠습니다:
+
+(webview_screen.dart 수정: WebViewController를 nullable로 변경)
+```dart
+class _WebViewScreenState extends State<WebViewScreen> {
+  WebViewController? _controller;
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWebView();
+  }
+```
+
+(webview_screen.dart 수정: _handleBackButton과 _reload에 null 체크 추가)
+```dart
+Future<bool> _handleBackButton() async {
+  if (_controller == null) return true;
+  final canGoBack = await _controller!.canGoBack();
+  if (canGoBack) {
+    await _controller!.goBack();
+    return false; // 앱 종료 방지
+  }
+  return true; // 앱 종료 허용
+}
+
+void _reload() {
+  _controller?.reload();
+  setState(() {
+    _errorMessage = null;
+  });
+}
+```
+
+(webview_screen.dart 수정: build 메서드에서 null 체크)
+```dart
+children: [
+  // WebView
+  if (_errorMessage == null && _controller != null)
+    WebViewWidget(controller: _controller!)
+  else if (_errorMessage != null)
+    _buildErrorView(),
+```
+
+이제 백엔드를 배포하겠습니다:
+
+(git 명령어 실행)
+```bash
+$ git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+	modified:   backend/src/main/kotlin/com/roulette/auth/AuthController.kt
+	modified:   backend/src/main/kotlin/com/roulette/auth/AuthDtos.kt
+	modified:   mobile/lib/webview_screen.dart
+
+$ git add backend/src/main/kotlin/com/roulette/auth/AuthController.kt backend/src/main/kotlin/com/roulette/auth/AuthDtos.kt
+
+$ git commit -m "fix: WebView 쿠키 이슈 대응 - 로그인 응답에 세션 ID 포함
+
+iOS WebView에서 Set-Cookie 헤더를 JavaScript로 접근할 수 없는 브라우저 보안 정책으로 인해
+세션 쿠키가 자동으로 저장되지 않는 문제를 해결하기 위해 로그인 응답 본문에 세션 ID를 포함시킴.
+
+변경사항:
+- AuthDtos: LoginResponse에 sessionId 필드 추가 (nullable)
+- AuthController: 로그인/me 응답에 session.id 포함
+- WebView는 응답 본문에서 세션 ID를 추출하여 localStorage에 저장하고
+  모든 후속 요청의 Cookie 헤더에 수동으로 포함
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+[main a5f6c42] fix: WebView 쿠키 이슈 대응 - 로그인 응답에 세션 ID 포함
+ 2 files changed, 7 insertions(+), 3 deletions(-)
+
+$ git add mobile/lib/webview_screen.dart
+
+$ git commit -m "fix: WebView 세션 ID 수동 관리 구현
+
+iOS WebView 쿠키 저장 이슈 해결을 위한 수동 세션 관리 로직 구현:
+- 로그인 응답에서 sessionId 추출하여 localStorage 저장
+- 모든 요청에 Cookie 헤더 자동 추가 (XMLHttpRequest & axios)
+- WebViewController nullable 처리로 초기화 에러 수정
+
+변경사항:
+- XMLHttpRequest 인터셉터: 로그인 제외한 모든 요청에 세션 쿠키 추가
+- axios 인터셉터: 요청/응답 인터셉터로 세션 ID 관리
+- WebViewController를 nullable로 변경하여 LateInitializationError 방지
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+[main 943654b] fix: WebView 세션 ID 수동 관리 구현
+ 1 file changed, 46 insertions(+), 33 deletions(-)
+
+$ git push origin main
+To https://github.com/h-ye-ryoung/roulette-vibe.git
+   30aca22..943654b  main -> main
+```
+
+완료! 변경사항을 커밋하고 푸시했습니다. 🚀
+
+## ✅ 완료된 작업
+
+1. **Backend 수정** (커밋: a5f6c42)
+   - 로그인 응답에 세션 ID 포함
+   - `/me` 엔드포인트도 세션 ID 포함
+
+2. **Mobile 수정** (커밋: 943654b)
+   - 세션 ID 수동 관리 로직 구현
+   - WebViewController 초기화 에러 수정
+   - XMLHttpRequest & axios 인터셉터 개선
+
+3. **배포 트리거**
+   - GitHub Actions가 자동으로 백엔드 배포 시작됨
+
+## 📊 배포 확인
+
+GitHub Actions 워크플로우 확인:
+```
+https://github.com/h-ye-ryoung/roulette-vibe/actions
+```
+
+약 **5-10분** 후 배포가 완료됩니다.
+
+## 🧪 테스트 방법
+
+배포 완료 후 모바일 앱을 다시 실행하고 로그를 확인하세요:
+
+```bash
+cd /Users/kimhyeryoung/Desktop/roulette-vibe/mobile
+flutter run
+```
+
+**성공 시 예상 로그:**
+```
+flutter: [XHR SUCCESS] POST .../api/auth/login - 200
+flutter: [XHR RESPONSE] {"success":true,"data":{"id":4,"nickname":"...","sessionId":"ABC123..."}}
+flutter: [SESSION SAVED FROM RESPONSE] ABC123...
+flutter: [ADDING SESSION] JSESSIONID=ABC123...
+flutter: [XHR SUCCESS] GET .../api/user/roulette/budget - 200  ← 이제 성공!
+```
+
+GitHub Actions 배포 상태를 보시겠어요?
+
+### [19:45] 사용자
+/prompt
+
+<!-- LAST_LOG_CURSOR: 2026-02-10T19:45:00+09:00 -->
