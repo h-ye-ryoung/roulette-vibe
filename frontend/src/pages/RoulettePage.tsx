@@ -90,7 +90,7 @@ export default function RoulettePage() {
 
   return (
     <AppLayout title="🎰 포인트 룰렛">
-      <div className="space-y-6">
+      <div className="space-y-6 pb-32">
         {/* 환영 메시지 */}
         <div className="text-center space-y-1">
           <p className="text-lg font-semibold text-gray-800">

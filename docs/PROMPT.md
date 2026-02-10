@@ -6156,3 +6156,15 @@ GitHub Actions 배포 상태를 보시겠어요?
 /prompt
 
 <!-- LAST_LOG_CURSOR: 2026-02-10T19:45:00+09:00 -->
+
+### [19:46] 사용자
+어플리케이션에서 1. 어플리케이션 하단 내용이 하단바에 가려지는 문제 2. 모바일 '상품' 페이지 UI가 좁아서 '포인트 부족' '재고 3개' 등의 상태 뱃지가 줄바꿈되고, 상품 제목이 ...로 너무 빨리 요약 처리되는데, 모바일에서 상품명/뱃지가 한 줄로 보일 수 있도록 모바일 반응형을 수정해줘
+
+### [19:47] Claude
+두 가지 모바일 UI 문제를 수정하겠습니다.
+
+먼저 현재 ProductsPage와 다른 페이지들의 상태를 확인하겠습니다.
+
+<function_calls>
+<invoke name="Read">
+<parameter name="file_path">/Users/kimhyeryoung/Desktop/roulette-vibe/frontend/src/pages/ProductsPage.tsx

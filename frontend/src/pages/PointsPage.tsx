@@ -61,7 +61,7 @@ export default function PointsPage() {
 
   return (
     <AppLayout title="💰 내 포인트">
-      <div className="space-y-6">
+      <div className="space-y-6 pb-32">
         {/* 환영 메시지 */}
         <div className="text-center space-y-1">
           <p className="text-lg font-semibold text-gray-800">

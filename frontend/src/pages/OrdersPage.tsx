@@ -38,7 +38,7 @@ export default function OrdersPage() {
 
   return (
     <AppLayout title="📦 주문 내역">
-      <div className="space-y-6 pb-6">
+      <div className="space-y-6 pb-32">
         {/* 환영 메시지 */}
         <div className="text-center space-y-1">
           <p className="text-lg font-semibold text-gray-800">

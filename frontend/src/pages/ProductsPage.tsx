@@ -116,7 +116,7 @@ export default function ProductsPage() {
 
   return (
     <AppLayout title="🛍️ 상품 구매">
-      <div className="space-y-6 pb-6">
+      <div className="space-y-6 pb-32">
         {/* 환영 메시지 */}
         <div className="text-center space-y-1">
           <p className="text-lg font-semibold text-gray-800">
@@ -208,59 +208,67 @@ interface ProductCardProps {
 
 function ProductCard({ product, onPurchaseClick, isPurchasing }: ProductCardProps) {
   return (
-    <div className="p-4 rounded-lg border bg-gradient-to-r from-purple-50/30 to-pink-50/30 border-purple-100/50 transition-all hover:shadow-md">
-      <div className="flex items-center gap-4">
+    <div className="p-3 rounded-lg border bg-gradient-to-r from-purple-50/30 to-pink-50/30 border-purple-100/50 transition-all hover:shadow-md">
+      <div className="flex items-start gap-3">
         {/* 상품 아이콘 */}
-        <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-          <Package className="w-6 h-6 text-purple-600" />
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+          <Package className="w-5 h-5 text-purple-600" />
         </div>
 
         {/* 상품 정보 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-base font-semibold text-gray-800 truncate">{product.name}</h3>
-            {product.stock <= 3 && (
-              <Badge variant="outline" className="text-xs px-2 py-0 border-orange-300 text-orange-700 bg-orange-50">
-                재고 {product.stock}개
-              </Badge>
+        <div className="flex-1 min-w-0 space-y-1.5">
+          {/* 상품명 - truncate 제거, 자연스럽게 줄바꿈 */}
+          <h3 className="text-sm font-semibold text-gray-800 leading-tight break-words">
+            {product.name}
+          </h3>
+
+          {/* 가격 + 뱃지 */}
+          <div className="space-y-1.5">
+            <span className="text-base font-bold text-purple-600 whitespace-nowrap">
+              {product.price.toLocaleString()}p
+            </span>
+
+            {/* 뱃지들 (별도 줄) */}
+            {(product.stock <= 3 || product.insufficientPoints) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {product.stock <= 3 && (
+                  <Badge variant="outline" className="text-xs px-1.5 py-0 border-orange-300 text-orange-700 bg-orange-50 whitespace-nowrap">
+                    재고 {product.stock}개
+                  </Badge>
+                )}
+
+                {product.insufficientPoints && (
+                  <Badge variant="outline" className="text-xs px-1.5 py-0 border-red-300 text-red-700 bg-red-50 whitespace-nowrap">
+                    포인트 부족
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
 
+          {/* 설명 (옵션) */}
           {product.description && (
-            <p className="text-xs text-gray-600 mb-2 line-clamp-2">{product.description}</p>
+            <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{product.description}</p>
           )}
-
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-purple-600">{product.price.toLocaleString()}p</span>
-
-            {product.insufficientPoints && (
-              <Badge variant="outline" className="text-xs px-2 py-0 border-red-300 text-red-700 bg-red-50">
-                포인트 부족
-              </Badge>
-            )}
-          </div>
         </div>
 
         {/* 구매 버튼 */}
-        <div className="flex-shrink-0 flex flex-col items-center gap-1">
+        <div className="flex-shrink-0">
           <Button
             size="sm"
             onClick={() => onPurchaseClick(product)}
             disabled={!product.canPurchase || isPurchasing}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 text-xs px-3 py-2 h-auto"
           >
             {isPurchasing ? (
-              '구매 중...'
+              <span className="text-xs">구매중</span>
             ) : (
               <>
-                <ShoppingCart className="w-4 h-4 mr-1" />
+                <ShoppingCart className="w-3.5 h-3.5 mr-1" />
                 구매
               </>
             )}
           </Button>
-          {product.canPurchase && !isPurchasing && (
-            <span className="text-xs text-green-600 font-medium">구매 가능</span>
-          )}
         </div>
       </div>
     </div>
