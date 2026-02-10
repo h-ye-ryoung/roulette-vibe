@@ -19,30 +19,34 @@ class SecurityConfig(
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        println("🔒 [SecurityConfig] Initializing custom security configuration...")
+
         http
             .csrf { it.disable() }
             .cors { cors ->
                 cors.configurationSource {
                     org.springframework.web.cors.CorsConfiguration().apply {
                         allowedOriginPatterns = listOf(
-                            "http://localhost:*",     // 로컬 개발 (모든 포트)
-                            "https://*.vercel.app"    // Vercel 배포 (프론트엔드/어드민)
+                            "http://localhost:*",
+                            "https://*.vercel.app"
                         )
                         allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         allowedHeaders = listOf("*")
-                        exposedHeaders = listOf("X-Session-ID")  // WebView에서 읽을 수 있도록
+                        exposedHeaders = listOf("X-Session-ID")
                         allowCredentials = true
                         maxAge = 3600
                     }
                 }
             }
-            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) }
+            .sessionManagement {
+                it.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+            }
             .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/admin/**").permitAll()  // 어드민은 인증 불필요
-                    .requestMatchers("/api/user/**").authenticated()  // 사용자는 세션 인증 필요
+                    .requestMatchers("/api/admin/**").permitAll()
+                    .requestMatchers("/api/user/**").authenticated()
                     .requestMatchers(
                         "/swagger-ui/**",
                         "/swagger-ui.html",
@@ -50,7 +54,7 @@ class SecurityConfig(
                         "/v3/api-docs/**"
                     ).permitAll()
                     .requestMatchers("/actuator/health").permitAll()
-                    .anyRequest().authenticated()
+                    .anyRequest().permitAll()  // 기타 요청은 허용 (authenticated → permitAll)
             }
             .exceptionHandling { ex ->
                 ex.authenticationEntryPoint(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
@@ -61,6 +65,8 @@ class SecurityConfig(
                 }
             }
 
-        return http.build()
+        val chain = http.build()
+        println("✅ [SecurityConfig] Custom security configuration loaded successfully!")
+        return chain
     }
 }
