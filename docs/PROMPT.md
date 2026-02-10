@@ -6168,3 +6168,361 @@ GitHub Actions 배포 상태를 보시겠어요?
 <function_calls>
 <invoke name="Read">
 <parameter name="file_path">/Users/kimhyeryoung/Desktop/roulette-vibe/frontend/src/pages/ProductsPage.tsx
+---
+
+## 세션 9 (2026-02-10) - 안드로이드 WebView 인증 수정
+
+### [20:05] 사용자
+모바일 웹뷰에서,
+1. 페이지 하단에 padding을 더 많이 주고
+2. 포인트 부족, 재고 3개 등의 뱃지는 줄바꿈해서 표시해줘
+
+### [20:06] Claude
+두 가지 개선사항을 적용하겠습니다.
+
+1. **페이지 하단 패딩 증가**: pb-24를 pb-32로 변경하여 더 많은 여유 공간 확보
+2. **뱃지 줄바꿈 개선**: 가격과 뱃지를 분리하여 뱃지만 별도 줄에 표시
+
+변경사항을 적용하겠습니다.
+
+```tsx
+// ProductsPage.tsx:119
+<div className="space-y-6 pb-32">  // pb-24 → pb-32
+```
+
+```tsx
+// ProductsPage.tsx:225-243
+<div className="space-y-1.5">
+  <span>1000p</span>
+  <div className="flex gap-2 flex-wrap">
+    <Badge>재고 3개</Badge>
+    <Badge>포인트 부족</Badge>
+  </div>
+</div>
+```
+
+**개선 효과**:
+- ✅ 가격이 첫 줄에 단독 표시 → 가독성 향상
+- ✅ 뱃지들이 두 번째 줄에 자연스럽게 배치
+- ✅ 뱃지가 여러 개여도 flex-wrap으로 유연하게 줄바꿈
+- ✅ 상품명은 이전처럼 자연스럽게 줄바꿈 (break-words)
+
+모바일 화면에서 테스트 가능합니다!
+
+### [20:10] 사용자
+이제 안드로이드 테스트를 시작할게 / 테스트 가이드 단계별로 알려줘
+
+### [20:11] Claude
+안드로이드 앱 테스트 가이드를 README.md에서 확인하고 단계별로 안내해드리겠습니다.
+
+## 📱 안드로이드 앱 테스트 가이드
+
+### 1단계: 사전 요구사항 확인
+
+**필수 설치 항목:**
+- ✅ Flutter SDK 3.10+
+- ✅ Android Studio
+- ✅ Android SDK API 21+
+
+**환경변수 설정** (macOS):
+```bash
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+
+source ~/.zshrc
+```
+
+**Flutter 환경 확인:**
+```bash
+flutter doctor
+```
+
+### 2단계: Android 에뮬레이터 생성
+
+**Android Studio에서:**
+1. Tools → Device Manager → Create Device
+2. Phone → Pixel 6 → Next
+3. System Image: API 34 → Download → Finish
+
+### 3단계: 에뮬레이터 시작
+
+```bash
+flutter emulators
+flutter emulators --launch <emulator_id>
+```
+
+### 4단계: 앱 실행
+
+```bash
+cd mobile
+flutter run
+```
+
+### 5단계: 실행 확인
+
+- ✅ 로딩: Purple 스피너 표시
+- ✅ 로그인 화면: 닉네임 입력 필드
+- ✅ 룰렛 페이지: Purple-Pink 그라디언트
+- ✅ 하단 탭: 룰렛/포인트/상품/주문
+
+현재 어느 단계까지 완료하셨나요?
+
+### [20:12] 사용자
+이것 또한 웹뷰라서 https://roulette-admin.vercel.app 을 연결해야해.
+
+### [20:13] Claude
+잠깐, 확인이 필요합니다. 현재 Mobile 앱의 구조를 확인해보겠습니다.
+
+```dart
+// mobile/lib/main.dart:6-9
+const String kWebAppUrl = String.fromEnvironment(
+  'WEB_APP_URL',
+  defaultValue: 'https://roulette-vibe.vercel.app',  // 기본값: 사용자 웹
+);
+```
+
+모바일 앱에서 어드민 기능을 사용하려는 목적이 무엇인가요?
+
+1. 어드민 웹을 모바일에서 테스트
+2. 별도 어드민 모바일 앱 생성
+3. 하나의 앱에 사용자+어드민 통합
+
+### [20:14] 사용자
+아니, 사용자 앱 (frontend) 만 연결하는 거야. 정정할게. 사용자 앱(https://roulette-vibe.vercel.app/)을 ios로 테스트했으니 그대로 안드로이드 테스트하는거야
+
+### [20:15] Claude
+아, 알겠습니다! 네, 맞습니다.
+
+**Mobile 앱은 이미 사용자 웹(`https://roulette-vibe.vercel.app`)을 로드하도록 설정되어 있습니다.**
+
+## 📱 안드로이드 테스트 단계 (iOS와 동일)
+
+### 1. 에뮬레이터 시작
+```bash
+flutter emulators
+flutter emulators --launch <emulator_id>
+```
+
+### 2. 앱 실행
+```bash
+cd mobile
+flutter run
+```
+
+### 3. 확인 사항
+- ✅ 로그인 화면
+- ✅ 룰렛 페이지 (Purple-Pink 그라디언트)
+- ✅ 포인트/상품/주문 페이지
+- ✅ 하단 네비게이션 바
+- ✅ 방금 수정한 UI (pb-32, 뱃지 줄바꿈)
+
+어느 단계에서 진행 중이신가요?
+
+### [20:20] 사용자
+flutter run을 사용했는데 다음과 같은 에러가 떠. 1. 원인 파악 2. 로그 확인 방법을 알려줘
+
+```
+I/flutter ( 6280): [WebView Console] [XHR SUCCESS] GET https://roulette-backend-upmn.onrender.com/api/user/roulette/status - 401
+I/flutter ( 6280): [WebView Console] [XHR RESPONSE] 
+I/flutter ( 6280): [WebView Console] [XHR SUCCESS] GET https://roulette-backend-upmn.onrender.com/api/user/roulette/status - 401
+```
+
+### [20:22] Claude
+## 🔍 원인 파악
+
+401 에러는 **인증 실패**입니다. iOS에서는 작동했지만 안드로이드에서 401이 발생하는 것은 **WebView 쿠키/세션 처리 차이** 때문일 가능성이 높습니다.
+
+```typescript
+// frontend/src/api/client.ts:5
+withCredentials: true, // 세션 쿠키 전송
+```
+
+```dart
+// mobile/lib/webview_screen.dart
+// iOS WebView 쿠키 활성화
+final cookieManager = WebViewCookieManager();
+await cookieManager.clearCookies(); // 기존 쿠키 클리어
+
+// 세션 ID 헤더 추가 로직 (100-111줄)
+const addSessionHeader = function(xhr) {
+  const sessionId = localStorage.getItem('SESSION_ID');
+  if (sessionId) {
+    xhr.setRequestHeader('X-Session-ID', sessionId);
+  }
+};
+```
+
+## 📋 2. 상세 로그 확인 방법
+
+### 방법 1: Flutter 터미널에서 필터링
+
+```bash
+# 로그인 시도/성공 로그
+flutter run | grep -E '\[LOGIN\]|\[XHR.*login'
+
+# 세션 ID 저장 로그
+flutter run | grep -E '\[DEBUG\].*SESSION_ID|\[ADDING SESSION\]'
+
+# 전체 WebView 로그
+flutter run | grep 'WebView Console'
+```
+
+### 방법 2: 앱에서 직접 확인
+
+**현재 터미널에서 다음 로그를 찾아주세요:**
+
+```bash
+# 1. 로그인 성공 로그
+[LOGIN] Extracted sessionId(FULL)=...
+[LOGIN] New SESSION_ID in localStorage: ...
+
+# 2. API 호출 시 세션 헤더 로그
+[DEBUG] localStorage.SESSION_ID=...
+[ADDING SESSION] X-Session-ID(full)=...
+
+# 3. 에러 로그
+[NO SESSION IN RESPONSE]
+[SESSION PARSE ERROR]
+[WARNING] No SESSION_ID in localStorage!
+```
+
+### 방법 3: Chrome DevTools (추천)
+
+```bash
+# 1. Chrome 브라우저 열기
+# 2. chrome://inspect 접속
+# 3. "Remote Target" 섹션에서 앱 찾기
+# 4. "inspect" 클릭
+# 5. Console 탭에서:
+
+localStorage.getItem('SESSION_ID')  // 세션 ID 확인
+```
+
+전체 로그를 복사해서 보여주시면 정확한 원인을 찾아드리겠습니다!
+
+### [20:25] 사용자
+```
+[Client WebView Console]
+- POST /api/auth/login -> 200
+- response.data.sessionId = 65289011-af12-4c7a-b9d7-454c61c5a40d
+- localStorage.SESSION_ID 저장/검증 SUCCESS
+- GET /api/user/roulette/budget, /status 요청 시
+  - localStorage.SESSION_ID=65289011-af12-4c7a-b9d7-454c61c5a40d
+  - X-Session-ID(full)=65289011-af12-4c7a-b9d7-454c61c5a40d
+
+[Server Render Logs] 
+2026-02-10T04:10:19.040Z  INFO 1 --- [nio-8080-exec-4] c.r.auth.SessionAuthenticationFilter     : 🔍 [SessionFilter] Searching for token: 65289011-af12-4c7a-b9d7-454c61c5a40d
+2026-02-10T04:10:19.139Z  WARN 1 --- [nio-8080-exec-4] c.r.auth.SessionAuthenticationFilter     : ❌ [SessionFilter] Token not found in DB!
+```
+
+### [20:27] Claude
+## ✅ 문제 발견!
+
+**원인**: 로그인 시 생성된 `sessionId`가 **DB에 저장되지 않음**
+
+```
+[Client] sessionId 생성: 65289011-af12-4c7a-b9d7-454c61c5a40d
+         ↓
+[Server] DB 검색: Token not found in DB! ❌
+```
+
+백엔드 코드를 분석한 결과, **트랜잭션 커밋 타이밍 문제**를 찾았습니다.
+
+### 문제의 핵심
+
+```kotlin
+// AuthService.kt (로그인)
+@Transactional  // ← 트랜잭션 시작
+fun login(request: LoginRequest): LoginResponse {
+    val token = UUID.randomUUID().toString()
+    val userSession = UserSession(...)
+    userSessionRepository.save(userSession)  // 저장 (아직 커밋 안 됨)
+    
+    return LoginResponse(sessionId = token)  // 응답 반환
+}  // ← 여기서 트랜잭션 커밋
+```
+
+**문제**:
+- Android WebView는 로그인 응답을 받자마자 **즉시** 다음 API 요청을 보냅니다
+- 이때 AuthService의 트랜잭션이 **아직 커밋되지 않았을 수 있습니다**
+- SessionAuthenticationFilter가 DB를 조회해도 **아직 커밋되지 않은 데이터는 보이지 않습니다**
+
+### iOS는 왜 작동했나?
+
+- iOS는 쿠키(JSESSIONID)도 함께 사용하므로 세션이 유지됨
+- 또는 iOS WebView의 요청 타이밍이 약간 느려서 커밋 완료 후 요청
+
+## 🔧 해결 방법
+
+### 방법 1: 명시적 Flush (권장)
+
+`AuthService`에서 토큰 저장 후 **즉시 DB에 반영**:
+
+```kotlin
+@Transactional
+fun login(request: LoginRequest): LoginResponse {
+    // ... 토큰 생성 및 저장 ...
+    val savedSession = userSessionRepository.save(userSession)
+    
+    userSessionRepository.flush()  // ← 추가: 즉시 DB에 반영
+    
+    // ... 응답 반환 ...
+}
+```
+
+어떤 방법으로 진행할까요?
+
+1. **백엔드 수정 (권장)**: AuthService에 flush() 추가 → 근본 해결
+2. **임시 해결**: WebView에 지연 추가 → 빠른 테스트 가능
+
+### [20:30] 사용자
+방법 1을 사용해 수정해줘
+
+### [20:31] Claude
+백엔드 코드를 수정하겠습니다. AuthService에 명시적 flush를 추가하여 트랜잭션 커밋을 보장하겠습니다.
+
+```kotlin
+// backend/src/main/kotlin/com/roulette/auth/AuthService.kt:45-47
+println("💾 [AuthService] Saving token to DB: token=$token, userId=${user.id}, expires=${userSession.expiresAt}")
+val savedSession = userSessionRepository.save(userSession)
+userSessionRepository.flush()  // 즉시 DB에 커밋하여 다음 요청에서 조회 가능하도록 보장
+println("✅ [AuthService] Token saved and flushed successfully: ${savedSession.token}")
+```
+
+## ✅ 백엔드 수정 완료!
+
+**AuthService.kt:47** - `flush()` 추가:
+
+```kotlin
+val savedSession = userSessionRepository.save(userSession)
+userSessionRepository.flush()  // ← 추가: 즉시 DB에 커밋
+```
+
+## 🚀 다음 단계: 배포 및 테스트
+
+### 옵션 1: GitHub 푸시 → Render 자동 배포 (권장)
+
+```bash
+cd backend
+
+git add .
+git commit -m "fix: Android WebView 인증 실패 수정 - DB flush 추가
+
+- AuthService에서 토큰 저장 후 명시적 flush() 호출
+- 트랜잭션 커밋 전 다음 요청이 들어오는 타이밍 이슈 해결
+- Android WebView에서 로그인 후 즉시 API 호출 시 401 에러 수정
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+
+git push origin main
+```
+
+**GitHub Actions CI/CD가 자동 실행됩니다:**
+1. 빌드 & 테스트
+2. Render Deploy Hook 호출
+3. 3-5분 후 배포 완료
+
+어떤 방법으로 진행하시겠습니까?
+
+<!-- LAST_LOG_CURSOR: 2026-02-10T20:32:00+09:00 -->

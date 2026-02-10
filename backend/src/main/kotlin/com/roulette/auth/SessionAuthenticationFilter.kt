@@ -89,8 +89,11 @@ class SessionAuthenticationFilter(
 
         // 2순위: 기존 HttpSession 방식 (웹 브라우저용)
         val session = request.getSession(false)
+        logger.info("🔍 [SessionFilter] HttpSession check: session=${session?.id}")
         if (session != null) {
+            logger.info("📋 [SessionFilter] HttpSession attributes: ${session.attributeNames.toList()}")
             val sessionUser = session.getAttribute("user") as? SessionUser
+            logger.info("👤 [SessionFilter] SessionUser from HttpSession: $sessionUser")
             if (sessionUser != null) {
                 logger.info("🌐 [SessionFilter] HttpSession found for user: ${sessionUser.nickname}")
                 val authorities = listOf(SimpleGrantedAuthority("ROLE_USER"))
@@ -101,7 +104,11 @@ class SessionAuthenticationFilter(
                 )
                 SecurityContextHolder.getContext().authentication = authentication
                 logger.info("✅ [SessionFilter] Authentication successful via HttpSession")
+            } else {
+                logger.warn("❌ [SessionFilter] No 'user' attribute in HttpSession")
             }
+        } else {
+            logger.warn("❌ [SessionFilter] No HttpSession found (session is null)")
         }
 
         filterChain.doFilter(request, response)
