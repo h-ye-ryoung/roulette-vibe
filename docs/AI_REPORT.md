@@ -185,6 +185,8 @@
 
 * 예: 1,000P 적립, 회수 예정 300P → 실제 적립 후 사용 가능 포인트 = 700P
 
+<img width="351.5" height="379" alt="image" src="https://github.com/user-attachments/assets/17ec5193-9f9e-4d9c-8fa3-bda3fa03baff" />
+
 ---
 
 ## 2.4 주문 취소 vs 룰렛 취소 정책 분리
