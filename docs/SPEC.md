@@ -75,17 +75,6 @@
 - 별도 회원가입 절차 없음
 - 닉네임에 UNIQUE 제약 적용
 
-### PDP-8: 역할 기반 접근 제어 — 완전 분리
-
-- User 엔티티에 `role` 필드 (`USER` / `ADMIN`)
-- 환경변수 `ADMIN_NICKNAMES`에 지정된 닉네임 → `role = ADMIN`
-- **API 접근 규칙**:
-  - `ADMIN` → `/api/admin/**`만 허용, `/api/user/**` 호출 시 403
-  - `USER` → `/api/user/**`만 허용, `/api/admin/**` 호출 시 403
-  - `/api/auth/**` → role 무관 접근 가능
-- 로그인 응답에 `role` 포함, 프론트엔드는 role로 라우팅 분기
-- ADMIN과 USER는 접근 가능한 화면/기능 세트가 완전히 분리
-
 ---
 
 ## 3. 도메인 모델
@@ -98,7 +87,6 @@
 |---|---|---|---|
 | id | Long (PK) | AUTO_INCREMENT | |
 | nickname | String | UNIQUE, NOT NULL | 로그인 식별자 |
-| role | Enum | NOT NULL, DEFAULT USER | USER / ADMIN |
 | created_at | Timestamp | NOT NULL | |
 
 #### DailyBudget
@@ -265,7 +253,6 @@ Product ──1:N──> Order
 
 ### 4.3 사용자 API (`/api/user`)
 
-> 모든 요청에 인증 토큰 필요. `role = USER`만 접근 가능.
 
 #### POST `/api/user/roulette/spin`
 
@@ -461,8 +448,6 @@ Product ──1:N──> Order
 ---
 
 ### 4.4 어드민 API (`/api/admin`)
-
-> 모든 요청에 인증 토큰 필요. `role = ADMIN`만 접근 가능.
 
 #### GET `/api/admin/dashboard`
 
@@ -667,177 +652,3 @@ Product ──1:N──> Order
 
 > `budgetRestored`: 당일 취소면 true (예산 복구), 다른 날이면 false.
 > 이미 사용된 포인트는 회수하지 않으므로, 부분 사용 중이어도 취소 가능.
-
----
-
-## 5. 동시성/정합성 전략
-
-### 5.1 중복 참여 방지
-
-- `RouletteHistory`에 `UNIQUE(user_id, spin_date)` 인덱스
-- INSERT 시도 → `DataIntegrityViolationException` 캐치 → `ALREADY_PARTICIPATED` 응답
-- 프론트엔드 체크는 UX용일 뿐, DB가 진실의 원천
-
-### 5.2 예산 원자적 차감
-
-```sql
-UPDATE daily_budget
-SET remaining = remaining - :amount,
-    updated_at = NOW()
-WHERE budget_date = :today
-  AND remaining >= :amount
-```
-
-- 영향 행 수 = 0 → 예산 부족 (`BUDGET_EXHAUSTED`)
-- 별도 락 없이 PostgreSQL 행 수준 잠금이 자동 적용
-
-### 5.3 포인트 차감 (주문)
-
-1. 유효 포인트 조회: `SELECT ... FROM point_ledger WHERE user_id = :userId AND balance > 0 AND expires_at > NOW() ORDER BY expires_at ASC FOR UPDATE`
-2. FIFO로 `balance` 차감, `OrderPointUsage` 레코드 생성
-3. 총 차감액 < 주문 금액이면 롤백 + `INSUFFICIENT_POINTS`
-
-### 5.4 재고 차감
-
-```sql
-UPDATE product
-SET stock = stock - 1
-WHERE id = :id AND stock > 0
-```
-
-- 영향 행 수 = 0 → `PRODUCT_OUT_OF_STOCK`
-
-### 5.5 트랜잭션 경계
-
-| 작업 | 단일 트랜잭션 내 포함 |
-|---|---|
-| 룰렛 참여 | RouletteHistory INSERT + DailyBudget UPDATE + PointLedger INSERT |
-| 상품 주문 | Order INSERT + PointLedger balance UPDATE(N건) + OrderPointUsage INSERT(N건) + Product stock UPDATE |
-| 주문 취소 | Order 상태 변경 + PointLedger balance 복원(N건) + Product stock 복원 |
-| 룰렛 취소 | RouletteHistory 상태 변경 + PointLedger balance 0 처리 + (당일이면) DailyBudget 복구 |
-
----
-
-## 6. 화면 명세
-
-### 6.1 사용자 웹 (frontend)
-
-| 화면 | 경로 | 기능 |
-|---|---|---|
-| 로그인 | `/login` | 닉네임 입력, role=USER 확인 후 진입 |
-| 홈 (룰렛) | `/` | 룰렛 UI + 애니메이션, 오늘 잔여 예산, 참여 여부 |
-| 내 포인트 | `/points` | 포인트 목록 (유효/만료 구분), 7일 내 만료 예정 알림, 잔액 |
-| 상품 목록 | `/products` | 구매 가능 상품, 내 잔액 대비 구매 가능 여부 표시 |
-| 주문 내역 | `/orders` | 내 주문 목록 + 상태 |
-
-### 6.2 어드민 웹 (admin)
-
-| 화면 | 경로 | 기능 |
-|---|---|---|
-| 로그인 | `/login` | 닉네임 입력, role=ADMIN 확인 후 진입 |
-| 대시보드 | `/` | 오늘 예산 현황, 참여자 수, 지급 총액 |
-| 예산 관리 | `/budget` | 예산 설정/조회, 룰렛 참여 내역 + 취소 기능 |
-| 상품 관리 | `/products` | 상품 CRUD, 재고 관리 |
-| 주문 내역 | `/orders` | 전체 주문 목록, 주문 취소(환불) 기능 |
-
-### 6.3 공통 UI 요구사항
-
-- 모든 화면에 **로딩 상태** 표시
-- API 실패 시 **에러 메시지** 표시
-- 빈 데이터 시 **빈 상태(empty state)** 표시
-- 테이블은 페이지네이션 적용
-
----
-
-## 7. 모바일 (Flutter)
-
-### 7.1 필수
-
-- 사용자 웹을 WebView로 렌더링
-- iOS/Android 동작
-- 뒤로가기 처리 (WebView 히스토리 네비게이션)
-- 로그인 상태 유지 (쿠키/토큰 보존)
-
-### 7.2 추가 (가산점)
-
-- 앱 아이콘 & 이름 변경
-- 네트워크 에러 시 커스텀 에러 페이지 + 재시도 버튼
-- WebView 로딩 중 네이티브 스피너
-- 스플래시 스크린
-
----
-
-## 8. 인프라 & 배포
-
-### 8.1 기술 스택
-
-| 레이어 | 스택 |
-|---|---|
-| Backend | Spring Boot 3.5.0, Kotlin 2.0.21, Java 21, JPA (Hibernate), PostgreSQL 16 |
-| API 문서 | SpringDoc OpenAPI 3 (Swagger UI: `/swagger-ui/index.html`) |
-| Frontend | React 18+, Vite, TypeScript, Tailwind CSS, TanStack Query |
-| Admin | React 18+, Vite, TypeScript, Tailwind CSS, TanStack Query |
-| Mobile | Flutter (WebView) |
-| DB (로컬) | Docker Compose + PostgreSQL |
-| DB (배포) | Neon |
-| CI/CD | GitHub Actions (백엔드 필수) |
-| 배포 | Render 또는 Railway (백엔드), Vercel (프론트엔드/어드민) |
-
-### 8.2 환경변수
-
-| 변수 | 용도 | 설정 위치 |
-|---|---|---|
-| `DATABASE_URL` | PostgreSQL 접속 URL | 로컬: .env / 배포: 플랫폼 환경변수 |
-| `ADMIN_NICKNAMES` | 어드민 닉네임 목록 (콤마 구분) | 배포: 플랫폼 환경변수 |
-| `JWT_SECRET` | 토큰 서명 키 | 배포: 플랫폼 환경변수 |
-| `DAILY_BUDGET_DEFAULT` | 기본 일일 예산 (선택) | 배포: 플랫폼 환경변수 |
-
-### 8.3 CI/CD (백엔드)
-
-- GitHub Actions: push 시 빌드 + 테스트 자동 실행
-- main 브랜치 push 시 Render/Railway 자동 배포
-- 설정 파일: `.github/workflows/backend-ci.yml`
-
----
-
-## 9. 테스트 전략
-
-### 9.1 필수 동시성 테스트
-
-| # | 시나리오 | 기대 결과 |
-|---|---|---|
-| T-1 | 동일 유저 10개 동시 룰렛 요청 | 1건만 성공, 9건은 ALREADY_PARTICIPATED |
-| T-2 | 100명 동시 룰렛 (예산 100,000p) | 총 지급액 <= 100,000p |
-| T-3 | 예산 500p 남은 상태에서 10명 동시 요청 | 최대 5명만 성공 |
-| T-4 | 동일 상품(재고 1) 3명 동시 주문 | 1건만 성공 |
-| T-5 | 만료 포인트로 주문 시도 | INSUFFICIENT_POINTS |
-| T-6 | 주문 취소 후 포인트 잔액 복원 | balance 정확히 복원 |
-| T-7 | 룰렛 취소 시 포인트 사용 중 | ROULETTE_POINTS_USED |
-
-### 9.2 커버리지 목표
-
-- 핵심 비즈니스 로직 (룰렛, 주문, 환불): **90% 이상**
-- 기타 새 코드: **80% 이상**
-
----
-
-## 10. 엣지 케이스 처리 규칙
-
-| 케이스 | 처리 |
-|---|---|
-| 자정(KST) 전후 요청 | 트랜잭션 시작 시점의 KST 날짜 사용 |
-| 어드민 예산 변경 | 다음 날부터 적용. 당일 remaining 변경 안 함 |
-| 룰렛 취소 시 포인트 일부 사용 | 취소 거부 (ROULETTE_POINTS_USED). 주문 먼저 취소 안내 |
-| 주문 취소 후 포인트 만료 상태 | balance 복원하지만 사용 불가 (만료 상태) |
-| 예산 잔여 100p 미만 | 실질적 소진 상태. 룰렛 참여 시 BUDGET_EXHAUSTED |
-
----
-
-## 11. 구현 순서
-
-1. **Phase 1**: 백엔드 코어 (스캐폴딩 → 엔티티 → 인증 → 룰렛 → 포인트 → 상품 → 주문 → 취소 → Swagger → 테스트)
-2. **Phase 2**: 백엔드 배포 (Docker Compose → Neon → GitHub Actions → Render/Railway)
-3. **Phase 3**: 프론트엔드 사용자 웹
-4. **Phase 4**: 어드민 웹
-5. **Phase 5**: 프론트엔드/어드민 배포 (Vercel)
-6. **Phase 6**: 모바일 Flutter WebView + APK 빌드

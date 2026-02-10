@@ -416,4 +416,96 @@ class ConcurrencyTest {
 
         println("원래 금액: ${originalAmount}p, 사용: ${usedAmount}p, 회수: ${remainingBalance}p")
     }
+
+    /**
+     * T-1-Extended: 동일 유저 300개 동시 룰렛 요청 → 1건만 성공
+     */
+    @Test
+    fun `T-1-Extended 동일 유저가 동시에 300번 룰렛 참여 시 1건만 성공해야 한다`() {
+        // Given: 유저 생성
+        val user = userRepository.save(User(nickname = "extended_user"))
+        val userId = user.id
+
+        // When: 300개의 스레드가 동시에 룰렛 참여 시도
+        val threadCount = 300
+        val executorService = Executors.newFixedThreadPool(threadCount)
+        val latch = CountDownLatch(threadCount)
+        val successCount = AtomicInteger(0)
+        val failCount = AtomicInteger(0)
+
+        repeat(threadCount) {
+            executorService.submit {
+                try {
+                    latch.countDown()
+                    latch.await()
+
+                    rouletteService.spin(userId)
+                    successCount.incrementAndGet()
+                } catch (e: Exception) {
+                    failCount.incrementAndGet()
+                }
+            }
+        }
+
+        executorService.shutdown()
+        while (!executorService.isTerminated) {
+            Thread.sleep(100)
+        }
+
+        // Then: 1건만 성공, 299건 실패
+        assertEquals(1, successCount.get(), "1건만 성공해야 함")
+        assertEquals(299, failCount.get(), "299건은 실패해야 함")
+
+        // DB 확인: 1건만 저장
+        val histories = rouletteHistoryRepository.findAllByUserId(userId)
+        assertEquals(1, histories.size, "DB에 1건만 저장되어야 함")
+    }
+
+    /**
+     * T-2-Extended: 300명 동시 룰렛 (예산 100,000p) → 총 지급액 <= 100,000p
+     */
+    @Test
+    fun `T-2-Extended 300명이 동시에 룰렛 참여 시 총 지급액이 예산을 초과하지 않아야 한다`() {
+        // Given: 300명의 유저 생성
+        val userCount = 300
+        val users = (1..userCount).map { i ->
+            userRepository.save(User(nickname = "extended_user_$i"))
+        }
+
+        // When: 300명이 동시에 룰렛 참여
+        val executorService = Executors.newFixedThreadPool(userCount)
+        val latch = CountDownLatch(userCount)
+        val successCount = AtomicInteger(0)
+
+        users.forEach { user ->
+            executorService.submit {
+                try {
+                    latch.countDown()
+                    latch.await()
+
+                    rouletteService.spin(user.id)
+                    successCount.incrementAndGet()
+                } catch (e: Exception) {
+                    // 예산 소진 시 실패 허용
+                }
+            }
+        }
+
+        executorService.shutdown()
+        while (!executorService.isTerminated) {
+            Thread.sleep(100)
+        }
+
+        // Then: 총 지급액이 100,000p 이하
+        val histories = rouletteHistoryRepository.findAll()
+        val totalIssued = histories.sumOf { it.amount }
+
+        assertTrue(totalIssued <= 100000, "총 지급액($totalIssued)이 예산(100,000)을 초과하지 않아야 함")
+        println("성공: ${successCount.get()}명, 총 지급액: ${totalIssued}p")
+
+        // DailyBudget.remaining >= 0 확인
+        val budget = dailyBudgetRepository.findAll().firstOrNull()
+        assertNotNull(budget, "예산이 존재해야 함")
+        assertTrue(budget!!.remaining >= 0, "예산 잔액이 음수가 되면 안 됨 (실제: ${budget.remaining})")
+    }
 }
