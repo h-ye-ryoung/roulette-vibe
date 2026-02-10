@@ -44,7 +44,8 @@ class AuthService(
 
         println("💾 [AuthService] Saving token to DB: token=$token, userId=${user.id}, expires=${userSession.expiresAt}")
         val savedSession = userSessionRepository.save(userSession)
-        println("✅ [AuthService] Token saved successfully: ${savedSession.token}")
+        userSessionRepository.flush()  // 즉시 DB에 커밋하여 다음 요청에서 조회 가능하도록 보장
+        println("✅ [AuthService] Token saved and flushed successfully: ${savedSession.token}")
 
         // 저장 직후 조회 테스트
         val foundSession = userSessionRepository.findValidToken(token)
