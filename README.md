@@ -464,6 +464,15 @@ flutter run -d emulator-5554
 
 ---
 
+## 주요 이슈 해결
+
+### iOS WebView 인증 실패 (401)
+- **문제**: AuthController가 UUID 토큰을 HttpSession ID로 덮어써서 DB 토큰과 클라이언트 토큰 불일치
+- **해결**: `response.copy(sessionId = session.id)` 제거, AuthService의 UUID 토큰을 그대로 반환
+- **결과**: DB 기반 토큰 인증으로 서버 재시작/슬립에도 세션 유지 가능
+
+---
+
 ## 라이선스
 
 이 프로젝트는 교육 및 포트폴리오 목적으로 제작되었습니다.
