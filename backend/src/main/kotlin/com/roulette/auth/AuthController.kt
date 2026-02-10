@@ -29,10 +29,9 @@ class AuthController(
         @Valid @RequestBody request: LoginRequest,
         session: HttpSession
     ): ResponseEntity<ApiResponse<LoginResponse>> {
+        // AuthService가 이미 DB 기반 토큰을 sessionId에 포함시킴
         val response = authService.login(request.nickname, session)
-        // WebView 쿠키 이슈 대응: 세션 ID를 응답에 포함
-        val responseWithSession = response.copy(sessionId = session.id)
-        return ResponseEntity.ok(ApiResponse.success(responseWithSession))
+        return ResponseEntity.ok(ApiResponse.success(response))
     }
 
     @Operation(
@@ -61,7 +60,7 @@ class AuthController(
                 LoginResponse(
                     id = userInfo.id,
                     nickname = userInfo.nickname,
-                    sessionId = session.id
+                    sessionId = null  // /me는 기존 세션 정보 조회이므로 새 토큰 불필요
                 )
             )
         )
